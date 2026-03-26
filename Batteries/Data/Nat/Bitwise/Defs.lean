@@ -41,17 +41,27 @@ def size (n : Nat) : Nat := n.binaryInduction 0 1 (fun _ => (· + 1))
 
 /-- `bits n` returns a list of Bools which correspond to the binary representation of n, where
 the head of the list represents the least significant bit -/
-def bits (n : Nat) : List Bool := n.binaryInduction [] [true] (·.bodd :: ·)
+def bitsList (n : Nat) : List Bool := n.binaryInduction [] [true] (·.bodd :: ·)
 
 /-- Construct a natural number from a list of bits using little endian convention. -/
-@[inline] def ofBits (xs : List Bool) : Nat :=
+@[inline] def ofBitsList (xs : List Bool) : Nat :=
   xs.foldr bit 0
 
 /-- `leastBits n` returns, for non-zero `n`, `some l`, where `l` is a list of the bits below the
   most significant bit of `n`. It returns `none` just when `n = 0`. -/
-def leastBits (n : Nat) : Option (List Bool) :=
-  n.binaryInduction none (some []) (fun n => Option.map (n.bodd :: ·))
+def leastBitsList (n : Nat) : Option (List Bool) :=
+  n.binaryInduction none (some []) (fun n => (Option.map (n.bodd :: ·)))
 
 /-- Re-construct a natural number from the bits below its most signficant bit -/
-def ofLeastBits (oxs : Option (List Bool)) : Nat :=
+def ofLeastBitsList (oxs : Option (List Bool)) : Nat :=
   oxs.elim 0 ((· + ·).uncurry <| ·.foldr (fun b => Prod.map (·.bit false) (·.bit b)) (1, 0))
+
+def toBitVec (n : Nat) : Sigma BitVec :=
+  n.binaryInduction ⟨0, 0#0⟩ ⟨1, 1#1⟩ (fun n w => ⟨_, w.2.concat n.bodd⟩)
+
+def toLeastBitVec (n : Nat) : Option (Sigma BitVec) :=
+  n.binaryInduction none (some ⟨0, 0#0⟩) (fun n => Option.map (fun w => ⟨_, w.2.concat n.bodd⟩))
+
+def ofBitVec (w : Sigma BitVec) : Nat := w.2.toNat
+
+def ofLeastBitVec : Option (Sigma BitVec) → Nat | none => 0 | some w => (1#1 ++ w.2).toNat
