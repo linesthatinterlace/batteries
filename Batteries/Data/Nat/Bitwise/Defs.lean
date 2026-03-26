@@ -30,38 +30,34 @@ def div2 : Nat → Nat | 0 | 1 => 0 | n + 2 => n.div2 + 1
   We have base cases for `0` and `1`: all other natural numbers are of the form
   `bit b (n + 1)` and `n + 1 < bit b (n + 1)`.-/
 @[elab_as_elim, specialize]
-def binaryInduction {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
+ def binaryInduction {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
     (bit : ∀ n, motive (n.div2 + 1) → motive (n + 2)) : ∀ n, motive n
   | 0 => zero | 1 => one | n + 2 => bit _ <| (n.div2 + 1).binaryInduction zero one bit
   termination_by n => n decreasing_by fun_induction div2 <;> grind
 
+/-- Fold over the binary digits of a natural number, from least significant to most significant.
+  Base cases are provided for `0` and `1`; all other numbers are folded via their `bit` digits. -/
+def binaryElim {α : Sort u} (zero : α) (one : α) (bit : Bool → α → α) : Nat → α
+  | 0 => zero | 1 => one | n + 2 => bit n.bodd <| (n.div2Impl + 1).binaryElim zero one bit
+  termination_by n => n decreasing_by grind [div2Impl, shiftRight_le]
+
 /-- `size n` : Returns the size of a natural number in
 bits i.e. the length of its binary representation -/
-def size (n : Nat) : Nat := n.binaryInduction 0 1 (fun _ => (· + 1))
+def size (n : Nat) : Nat := n.binaryElim 0 1 (fun _ => (· + 1))
 
 /-- `bits n` returns a list of Bools which correspond to the binary representation of n, where
 the head of the list represents the least significant bit -/
-def bitsList (n : Nat) : List Bool := n.binaryInduction [] [true] (·.bodd :: ·)
+def bitsList (n : Nat) : List Bool := n.binaryElim [] [true] (· :: ·)
 
 /-- Construct a natural number from a list of bits using little endian convention. -/
 @[inline] def ofBitsList (xs : List Bool) : Nat :=
   xs.foldr bit 0
 
-/-- `leastBits n` returns, for non-zero `n`, `some l`, where `l` is a list of the bits below the
+/-- `leastBitsList n` returns, for non-zero `n`, `some l`, where `l` is a list of the bits below the
   most significant bit of `n`. It returns `none` just when `n = 0`. -/
 def leastBitsList (n : Nat) : Option (List Bool) :=
-  n.binaryInduction none (some []) (fun n => (Option.map (n.bodd :: ·)))
+  n.binaryElim none (some []) (fun b => Option.map (b :: ·))
 
 /-- Re-construct a natural number from the bits below its most signficant bit -/
 def ofLeastBitsList (oxs : Option (List Bool)) : Nat :=
   oxs.elim 0 ((· + ·).uncurry <| ·.foldr (fun b => Prod.map (·.bit false) (·.bit b)) (1, 0))
-
-def toBitVec (n : Nat) : Sigma BitVec :=
-  n.binaryInduction ⟨0, 0#0⟩ ⟨1, 1#1⟩ (fun n w => ⟨_, w.2.concat n.bodd⟩)
-
-def toLeastBitVec (n : Nat) : Option (Sigma BitVec) :=
-  n.binaryInduction none (some ⟨0, 0#0⟩) (fun n => Option.map (fun w => ⟨_, w.2.concat n.bodd⟩))
-
-def ofBitVec (w : Sigma BitVec) : Nat := w.2.toNat
-
-def ofLeastBitVec : Option (Sigma BitVec) → Nat | none => 0 | some w => (1#1 ++ w.2).toNat

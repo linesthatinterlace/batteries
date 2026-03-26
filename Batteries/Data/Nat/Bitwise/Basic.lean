@@ -127,11 +127,11 @@ theorem testBit_zero_eq_bodd {n : Nat} : n.testBit 0 = n.bodd := bodd_val.symm
 @[simp, grind =] theorem div2_one : div2 1 = 0 := rfl
 @[simp, grind =] theorem div2_add_two : div2 (n + 2) = div2 n + 1 := rfl
 
-@[grind =] theorem div2_succ : div2 (n + 1) = n.div2 + n.bodd.toNat := by induction n <;> grind
-
 @[csimp]
 theorem div2_eq_div2Impl : div2 = div2Impl := by
   funext; fun_induction div2 <;> grind [div2Impl, Nat.shiftRight_eq_div_pow]
+
+@[grind =] theorem div2_succ : div2 (n + 1) = n.div2 + n.bodd.toNat := by induction n <;> grind
 
 theorem div2_val : div2 n = n / 2 := congrFun div2_eq_div2Impl n
 
@@ -217,7 +217,6 @@ theorem testBit_bit_add_one : (bit b n).testBit (m + 1) = n.testBit m := by grin
 theorem testBit_bit : (bit b n).testBit m = if m = 0 then b else n.testBit (m - 1) := by
   grind [cases Nat]
 
-
 /-! ### binaryInduction -/
 
 section
@@ -225,7 +224,8 @@ section
 variable {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
   (bit : ∀ n, motive (n.div2 + 1) → motive (n + 2))
 
-@[simp, grind =] theorem binaryInduction_zero : binaryInduction zero one bit 0 = zero := by
+@[simp, grind =] theorem binaryInduction_zero :
+    binaryInduction zero one bit 0 = zero := by
   simp [binaryInduction]
 @[simp, grind =] theorem binaryInduction_one : binaryInduction zero one bit 1 = one := by
   simp [binaryInduction]
@@ -233,6 +233,25 @@ variable {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
     bit n (binaryInduction zero one bit (n.div2 + 1)) := by simp [binaryInduction]
 
 end
+
+/-! ### binaryElim -/
+
+section
+
+variable (zero : α) (one : α) (bit : Bool → α → α)
+
+@[simp, grind =] theorem binaryElim_zero :
+    binaryElim zero one bit 0 = zero := by simp [binaryElim]
+@[simp, grind =] theorem binaryElim_one : binaryElim zero one bit 1 = one := by simp [binaryElim]
+@[simp, grind =] theorem binaryElim_add_two : binaryElim zero one bit (n + 2) =
+    bit n.bodd (binaryElim zero one bit (n.div2 + 1)) := by simp [binaryElim, div2_eq_div2Impl]
+
+end
+
+theorem binaryElim_bit_apply (n : Nat) : binaryElim 0 1 bit n = n := by
+  induction n using binaryInduction <;> grind
+
+theorem binaryElim_bit : binaryElim 0 1 bit = id := funext binaryElim_bit_apply
 
 /-! ### size -/
 
