@@ -54,4 +54,4 @@ def leastBits (n : Nat) : Option (List Bool) :=
 
 /-- Re-construct a natural number from the bits below its most signficant bit -/
 def ofLeastBits (oxs : Option (List Bool)) : Nat :=
-  oxs.elim 0 ((· + ·).uncurry <| ·.foldr (fun b => Prod.map (·.bit b) (·.bit false)) (0, 1))
+  oxs.elim 0 ((· + ·).uncurry <| ·.foldr (fun b => Prod.map (·.bit false) (·.bit b)) (1, 0))
