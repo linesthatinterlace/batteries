@@ -144,23 +144,42 @@ theorem testBit_div2 {n : Nat} : n.div2.testBit i = n.testBit (i + 1) :=
 @[simp, grind =] theorem bit_zero : bit b 0 = b.toNat := rfl
 @[simp, grind =] theorem bit_succ : bit b (n + 1) = n.bit b + 2 := rfl
 
-theorem bit_false : bit false n = n + n := by fun_induction bit <;> grind
-
 @[grind =]
-theorem bit_true (n : Nat) : bit true n = bit false n + 1 := by induction n <;> grind
+theorem bit_add_bit (b d : Bool) (n m : Nat) :
+    bit b n + bit d m =
+    bif b then bit (!d) (n + m + d.toNat) else bit d (n + m) := by
+  induction m
+  · cases d with | false => cases b <;> rfl | true => cases b <;> induction n <;> grind
+  · cases d <;> cases b <;> grind
 
-@[simp, grind =]
-theorem bit_add (b : Bool) (n m : Nat) :
-    bit b (n + m) = bit false n + bit b m := by induction m <;> grind [cases Bool]
+theorem bit_add_bit_false (b : Bool) (n m : Nat) :
+    bit b n + bit false m = bit b (n + m) := by grind
 
-theorem bit_add_bit (b d : Bool) (a p : Nat) :
-    bit b a + bit d p = bit (b != d) (a + p + (b && d).toNat) := by cases d <;> cases b <;> grind
+theorem bit_false_add_bit (b : Bool) (n m : Nat) :
+    bit false n + bit b m = bit b (n + m) := by grind
+
+theorem bit_true_add_bit (b : Bool) (n m : Nat) :
+    bit true n + bit b m = bit (!b) (n + m + b.toNat) := by grind
+
+theorem bit_add_bit_true (b : Bool) (n m : Nat) :
+    bit b n + bit true m = bit (!b) (n + m + b.toNat) := by grind
+
+theorem bit_false_add_one (n : Nat) : bit false n + 1 = bit true n := bit_false_add_bit true n 0
+
+theorem bit_true_add_one (n : Nat) : bit true n + 1 = bit false (n + 1) := bit_true_add_bit true n 0
+
+theorem bit_add_eq_bit_bne_add_toNat_and (b d : Bool) (n m : Nat) :
+    bit b n + bit d m = bit (b != d) (n + m + (b && d).toNat) := by
+  cases b <;> cases d <;> apply bit_add_bit
 
 @[csimp]
 theorem bit_eq_bitImpl : bit = bitImpl := by
   funext b n; fun_induction bit <;> cases b <;> grind [bitImpl]
 
 theorem bit_val : n.bit b = 2 * n + b.toNat := congrFun (congrFun bit_eq_bitImpl b) n
+
+theorem bit_false : bit false n = 2 * n := bit_val
+theorem bit_true : bit true n = 2 * n + 1 := bit_val
 
 /-! ### div2, bodd, bit -/
 
@@ -364,13 +383,20 @@ theorem getLast_bitsList_succ : (n + 1).bitsList.getLast bitsList_succ_ne_nil = 
 @[simp, grind =] theorem ofBitsList_nil : ofBitsList [] = 0 := rfl
 @[simp, grind =] theorem ofBitsList_cons : ofBitsList (b :: bs) = bit b (ofBitsList bs) := rfl
 
-@[simp] theorem ofBitsList_eq_zero_iff : ofBitsList bs = 0 ↔ ∀ x ∈ bs, x = false := by
-  induction bs
-  · grind
-  · simp only [List.mem_cons, forall_eq_or_imp]
-    grind [bit_eq_zero_iff]
+@[simp] theorem ofBitsList_eq_zero_iff : ofBitsList bs = 0 ↔ true ∉ bs := by
+  induction bs <;> grind
 
-theorem ofBitsList_ne_zero_iff : ofBitsList bs ≠ 0 ↔ ∃ x ∈ bs, x = true := by simp
+@[grind .]
+theorem ofBitsList_ne_zero_iff : ofBitsList bs ≠ 0 ↔ true ∈ bs := by simp
+
+@[grind .]
+theorem true_mem_of_ne_zero_ofBitsList (h : ofBitsList bs ≠ 0) : true ∈ bs := by simpa using h
+
+@[grind .]
+theorem true_mem_of_neZero_ofBitsList [NeZero (ofBitsList bs)] : true ∈ bs :=
+  true_mem_of_ne_zero_ofBitsList (NeZero.ne _)
+
+theorem ne_zero_ofBitsList_of_true_mem (h : true ∈ bs) : ofBitsList bs ≠ 0 := by simpa using h
 
 theorem ofBitsList_lt_two_pow : ofBitsList bs < 2 ^ bs.length := by
   induction bs <;> grind [cases Bool, bit_val]
@@ -399,17 +425,18 @@ theorem eq_of_bitsList_eq (hnm : bitsList n = bitsList m) : n = m := injective_b
 
 theorem bitsList_inj : bitsList n = bitsList m ↔ n = m := by grind [eq_of_bitsList_eq]
 
+@[grind =] theorem bitsList_ofBitsList_of_forall_getLast_eq_true {bs : List Bool}
+    (hbs : (hbs : bs ≠ []) → bs.getLast hbs = true) : bitsList (ofBitsList bs) = bs := by
+  induction bs <;> grind
+
 theorem bitsList_ofBitsList_nil : bitsList (ofBitsList []) = [] := by grind
 
-@[grind =] theorem bitsList_ofBitsList_of_getLast_eq_true {bs : List Bool} (hbs₁ : bs ≠ [])
-    (hbs₂ : bs.getLast hbs₁ = true) : bitsList (ofBitsList bs) = bs := by
-  induction bs with | nil => grind | cons b' bs IH =>
-    have H : ofBitsList bs = 0 ↔ bs = [] := by cases bs <;> grind
-    grind
+theorem bitsList_ofBitsList_concat_true {bs : List Bool} :
+    bitsList (ofBitsList (bs ++ [true])) = bs ++ [true] := by grind
 
-@[grind =] theorem bitsList_ofBitsList_of_forall_getLast_eq_true {bs : List Bool}
-    (hbs : ∀ (hbs : bs ≠ []), bs.getLast hbs = true) : bitsList (ofBitsList bs) = bs := by
-  induction bs <;> grind
+theorem bitsList_ofBitsList_of_getLast_eq_true {bs : List Bool} (hbs₁ : bs ≠ [])
+    (hbs₂ : bs.getLast hbs₁ = true) : bitsList (ofBitsList bs) = bs := by grind
+
 
 /-! ### leastBitsList -/
 
@@ -453,7 +480,6 @@ theorem leastBitsList_bit : leastBitsList (n.bit b) =
 @[simp] theorem leastBitsList_bit_true : leastBitsList (bit true n) =
     if n = 0 then some [] else (leastBitsList n).map (true :: ·) := by grind
 
-
 /-! ### ofLeastBitsList -/
 
 @[simp, grind =] theorem ofLeastBitsList_none : ofLeastBitsList none = 0 := rfl
@@ -462,6 +488,10 @@ theorem leastBitsList_bit : leastBitsList (n.bit b) =
 @[simp, grind =] theorem ofLeastBitsList_some_cons :
     ofLeastBitsList (some (b :: bs)) = bit b (ofLeastBitsList (some bs)) := by
   grind [ofLeastBitsList]
+
+@[grind =]
+theorem ofLeastBitsList_eq : ofLeastBitsList oxs = oxs.elim 0 (ofBitsList ∘ (· ++ [true])) := by
+  cases oxs with | none => grind | some bs => induction bs <;> grind
 
 @[simp]
 theorem ofLeastBitsList_eq_zero_iff : ofLeastBitsList oxs = 0 ↔ oxs = none := by
@@ -479,8 +509,7 @@ theorem ofLeastBitsList_leastBitsList (n : Nat) : ofLeastBitsList (leastBitsList
   induction n using binaryInduction <;> grind
 
 theorem leastBitsList_ofLeastBitsList (oxs : Option (List Bool)) :
-    leastBitsList (ofLeastBitsList oxs) = oxs := by
-  cases oxs with | none => grind | some bs => induction bs <;> grind [List.dropLast_cons_of_ne_nil]
+    leastBitsList (ofLeastBitsList oxs) = oxs := by grind [cases Option]
 
 theorem leftInverse_ofLeastBitsList_leastBitsList :
     Function.LeftInverse ofLeastBitsList leastBitsList := ofLeastBitsList_leastBitsList
