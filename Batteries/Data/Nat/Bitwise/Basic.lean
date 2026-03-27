@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 François G. Dorais. All rights reserved.
+Copyright (c) 2025 François G. Dorais, Wrenna Robson. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: François G. Dorais
+Authors: François G. Dorais, Wrenna Robson
 -/
 
 module
@@ -301,8 +301,7 @@ theorem bitsList_bit_succ : bitsList (bit b (n + 1)) = b :: bitsList (n + 1) := 
 @[grind =] theorem bitsList_eq_nil_iff : bitsList n = [] ↔ n = 0 := by grind [cases Nat]
 theorem bitsList_ne_nil_iff : bitsList n ≠ [] ↔ n ≠ 0 := by grind
 
-@[simp]
-theorem bitsList_eq_nil_of_ne_zero (hn : n ≠ 0) : bitsList n ≠ [] := by grind
+@[grind =>] theorem bitsList_eq_nil_of_ne_zero (hn : n ≠ 0) : bitsList n ≠ [] := by grind
 @[simp]
 theorem bitsList_eq_nil_of_neZero [NeZero n] : bitsList n ≠ [] :=
   bitsList_eq_nil_of_ne_zero <| NeZero.ne _
@@ -381,7 +380,7 @@ theorem bitsList_ofBitsList_nil : bitsList (ofBitsList []) = [] := by grind
 @[simp, grind =] theorem leastBitsList_add_two : leastBitsList (n + 2) =
     (n.div2 + 1).leastBitsList.map (n.bodd :: ·) := by simp [leastBitsList]
 
-@[simp, grind =]
+@[grind =]
 theorem leastBitsList_eq_some_dropLast_bitsList_of_ne_zero (hn : n ≠ 0) :
     leastBitsList n = some (bitsList n).dropLast := by
   induction n using binaryInduction <;> grind [List.dropLast_cons_of_ne_nil]
