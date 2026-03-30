@@ -479,7 +479,7 @@ theorem leastBitsList_bit : leastBitsList (n.bit b) =
     if n = 0 then bif b then some [] else none else some (b :: (bitsList n).dropLast) := by
   grind [cases Nat]
 
-@[simp] theorem leastBitsList_bit_zero :
+theorem leastBitsList_bit_zero :
     leastBitsList (bit b 0) = bif b then some [] else none := by grind
 
 theorem leastBitsList_bit_true : leastBitsList (bit true n) =
