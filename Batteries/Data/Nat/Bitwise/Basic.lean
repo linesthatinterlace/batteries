@@ -299,6 +299,17 @@ theorem binaryElim_zero_one_bit : binaryElim 0 1 bit = id := funext binaryElim_z
 theorem size_succ : size (n + 1) = if n = 0 then 1 else size (n.div2 + n.bodd.toNat) + 1 :=
   binaryElim_succ
 
+theorem size_eq_zero_iff : size n = 0 ↔ n = 0 := by grind [cases Nat]
+theorem size_ne_zero_iff : size n ≠ 0 ↔ n ≠ 0 := by grind [cases Nat]
+
+@[grind =>]
+theorem size_ne_zero_of_ne_zero (hn : n ≠ 0) : size n ≠ 0 :=
+  size_ne_zero_iff.mpr hn
+
+instance [NeZero n] : NeZero (size n) := ⟨size_ne_zero_of_ne_zero <| NeZero.ne _⟩
+
+theorem size_succ_ne_zero : size (n + 1) ≠ 0 := NeZero.ne _
+
 @[grind =]
 theorem size_bit : size (n.bit b) = if n = 0 then b.toNat else size n + 1 := binaryElim_bit
 
@@ -311,13 +322,6 @@ theorem size_bit_of_ne_zero (hn : n ≠ 0) : size (n.bit b) = size n + 1 := by g
   size_bit_of_ne_zero (NeZero.ne _)
 
 theorem size_bit_add_two : size (n.bit b + 2) = size (n + 1) + 1 := by simp
-
-theorem size_succ_ne_zero : size (n + 1) ≠ 0 := by grind
-
-instance : NeZero (size (n + 1)) := ⟨size_succ_ne_zero⟩
-
-theorem size_eq_zero_iff : size n = 0 ↔ n = 0 := by grind [cases Nat]
-theorem size_ne_zero_iff : size n ≠ 0 ↔ n ≠ 0 := by grind [cases Nat]
 
 /-! ### bitsList -/
 
@@ -412,6 +416,7 @@ theorem ofBitsList_lt_two_pow : ofBitsList bs < 2 ^ bs.length := by
 
 /-! ### bitsList, ofBitsList -/
 
+@[grind =]
 theorem ofBitsList_bitsList (n : Nat) : ofBitsList (bitsList n) = n := by
   induction n using binaryInduction <;> grind
 
@@ -484,18 +489,18 @@ theorem leastBitsList_bit : leastBitsList (n.bit b) =
 
 @[simp, grind =] theorem ofLeastBitsList_none : ofLeastBitsList none = 0 := rfl
 @[simp, grind =] theorem ofLeastBitsList_some_nil : ofLeastBitsList (some []) = 1 := rfl
-
 @[simp, grind =] theorem ofLeastBitsList_some_cons :
     ofLeastBitsList (some (b :: bs)) = bit b (ofLeastBitsList (some bs)) := by
   grind [ofLeastBitsList]
 
 @[grind =]
-theorem ofLeastBitsList_eq : ofLeastBitsList oxs = oxs.elim 0 (ofBitsList ∘ (· ++ [true])) := by
+theorem ofLeastBitsList_eq : ofLeastBitsList oxs =
+    oxs.elim 0 (ofBitsList ∘ (· ++ [true])) := by
   cases oxs with | none => grind | some bs => induction bs <;> grind
 
 @[simp]
 theorem ofLeastBitsList_eq_zero_iff : ofLeastBitsList oxs = 0 ↔ oxs = none := by
-  cases oxs with | none => grind | some bs => induction bs <;> grind
+  grind [cases Option]
 
 theorem ofLeastBitsList_ne_zero_iff : ofLeastBitsList oxs ≠ 0 ↔ oxs ≠ none := by simp
 
@@ -506,7 +511,7 @@ instance : NeZero (ofLeastBitsList (some bs)) := ⟨ofLeastBitsList_some_ne_zero
 /-! ### leastBitsList, ofLeastBitsList -/
 
 theorem ofLeastBitsList_leastBitsList (n : Nat) : ofLeastBitsList (leastBitsList n) = n := by
-  induction n using binaryInduction <;> grind
+  grind [List.dropLast_concat_getLast]
 
 theorem leastBitsList_ofLeastBitsList (oxs : Option (List Bool)) :
     leastBitsList (ofLeastBitsList oxs) = oxs := by grind [cases Option]
@@ -528,3 +533,33 @@ theorem leastBitsList_inj : leastBitsList n = leastBitsList m ↔ n = m :=
 
 theorem ofLeastBitsList_inj : ofLeastBitsList oxs = ofLeastBitsList oys ↔ oxs = oys :=
   injective_ofLeastBitsList.eq_iff
+
+/-! ### popcount -/
+
+@[simp, grind =] theorem popcount_zero : popcount 0 = 0 := by simp [popcount]
+@[simp, grind =] theorem popcount_one : popcount 1 = 1 := by simp [popcount]
+@[simp, grind =] theorem popcount_add_two : popcount (n + 2) =
+    popcount (n.div2 + 1) + n.bodd.toNat := by simp [popcount, flip]
+
+@[grind =]
+theorem popcount_succ : popcount (n + 1) = if n = 0 then 1 else
+    popcount (n.div2 + n.bodd.toNat) + (!n.bodd).toNat := binaryElim_succ
+
+@[simp, grind =]
+theorem popcount_bit : popcount (n.bit b) = popcount n + b.toNat :=
+  calc  _ = if n = 0 then b.toNat else popcount n + b.toNat := binaryElim_bit
+        _ = _ := by grind
+
+theorem popcount_eq_zero_iff : popcount n = 0 ↔ n = 0 := by
+  induction n using binaryInduction <;> grind
+
+theorem popcount_ne_zero_iff : popcount n ≠ 0 ↔ n ≠ 0 := by
+  grind [popcount_eq_zero_iff]
+
+@[grind =>]
+theorem popcount_ne_zero_of_ne_zero (hn : n ≠ 0) : popcount n ≠ 0 :=
+  popcount_ne_zero_iff.mpr hn
+
+instance [NeZero n] : NeZero (popcount n) := ⟨popcount_ne_zero_of_ne_zero <| NeZero.ne _⟩
+
+theorem popcount_succ_ne_zero : popcount (n + 1) ≠ 0 := NeZero.ne _
