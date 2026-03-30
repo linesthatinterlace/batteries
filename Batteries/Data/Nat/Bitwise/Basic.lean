@@ -217,7 +217,7 @@ theorem ne_zero_of_bit_ne_zero (hn : n.bit b = 0) : n = 0 := by grind [bit_eq_ze
 @[grind =>]
 theorem bit_ne_zero_of_ne_zero (hn : n ≠ 0) : n.bit b ≠ 0 := by grind [bit_eq_zero_iff]
 
-@[simp, grind =>]
+@[grind =>]
 theorem bit_true_ne_zero : bit true n ≠ 0 := by grind [bit_eq_zero_iff]
 
 instance {n : Nat} [NeZero n] : NeZero (n.bit b) := ⟨bit_ne_zero_of_ne_zero <| NeZero.ne _⟩
@@ -313,7 +313,7 @@ theorem size_succ_ne_zero : size (n + 1) ≠ 0 := NeZero.ne _
 @[grind =]
 theorem size_bit : size (n.bit b) = if n = 0 then b.toNat else size n + 1 := binaryElim_bit
 
-@[simp] theorem size_bit_zero : size (bit b 0) = b.toNat := by grind
+theorem size_bit_zero : size (bit b 0) = b.toNat := by grind
 
 @[simp] theorem size_bit_true : size (bit true n) = size n + 1 := by grind
 
@@ -338,7 +338,7 @@ theorem bitsList_succ : bitsList (n + 1) = if n = 0 then [true] else
 theorem bitsList_bit : bitsList (n.bit b) =
     if n = 0 then bif b then [true] else [] else b :: bitsList n := binaryElim_bit
 
-@[simp] theorem bitsList_bit_zero : bitsList (bit b 0) = bif b then [true] else [] := by grind
+theorem bitsList_bit_zero : bitsList (bit b 0) = bif b then [true] else [] := by grind
 
 @[simp] theorem bitsList_bit_true : bitsList (bit true n) = true :: bitsList n := by
   grind [cases Nat]
@@ -446,7 +446,7 @@ theorem bitsList_ofBitsList_of_getLast_eq_true {bs : List Bool} (hbs₁ : bs ≠
 /-! ### leastBitsList -/
 
 @[simp, grind =] theorem leastBitsList_zero : leastBitsList 0 = none := by simp [leastBitsList]
-@[simp, grind =] theorem leastBitsList_one : leastBitsList 1 = some [] := by simp [leastBitsList]
+@[grind =] theorem leastBitsList_one : leastBitsList 1 = some [] := by simp [leastBitsList]
 @[simp, grind =] theorem leastBitsList_add_two : leastBitsList (n + 2) =
     (n.div2 + 1).leastBitsList.map (n.bodd :: ·) := by simp [leastBitsList]
 
@@ -482,7 +482,7 @@ theorem leastBitsList_bit : leastBitsList (n.bit b) =
 @[simp] theorem leastBitsList_bit_zero :
     leastBitsList (bit b 0) = bif b then some [] else none := by grind
 
-@[simp] theorem leastBitsList_bit_true : leastBitsList (bit true n) =
+theorem leastBitsList_bit_true : leastBitsList (bit true n) =
     if n = 0 then some [] else (leastBitsList n).map (true :: ·) := by grind
 
 /-! ### ofLeastBitsList -/
