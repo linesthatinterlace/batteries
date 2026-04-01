@@ -511,7 +511,6 @@ theorem bitsList_ofBitsList_concat_true {bs : List Bool} :
 theorem bitsList_ofBitsList_of_getLast_eq_true {bs : List Bool} (hbs₁ : bs ≠ [])
     (hbs₂ : bs.getLast hbs₁ = true) : bitsList (ofBitsList bs) = bs := by grind
 
-
 /-! ### leastBitsList -/
 
 @[simp, grind =] theorem leastBitsList_zero : leastBitsList 0 = none := by simp [leastBitsList]

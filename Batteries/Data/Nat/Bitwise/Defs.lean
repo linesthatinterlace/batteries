@@ -40,9 +40,9 @@ def div2 : Nat → Nat | 0 | 1 => 0 | n + 2 => n.div2 + 1
   | 0 => zero | 1 => one | n + 2 => bit n <| (n.div2 + 1).binaryInduction zero one bit
   termination_by n => n decreasing_by fun_induction div2 <;> grind
 
-/-- Fold over the binary digits of a natural number, from least significant to most significant.
+/-- Elim over the binary digits of a natural number, from least significant to most significant.
   Base cases are provided for `0` and `1`; all other numbers are folded via their `bit` digits. -/
-def binaryElim {α : Sort u} (zero : α) (one : α) (bit : Bool → α → α) : Nat → α
+def binaryElim {α : Sort u} (zero one : α) (bit : Bool → α → α) : Nat → α
   | 0 => zero | 1 => one | n + 2 => bit n.isOdd <| (n.div2Impl + 1).binaryElim zero one bit
   termination_by n => n decreasing_by grind [div2Impl, shiftRight_le]
 
