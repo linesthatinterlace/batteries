@@ -148,9 +148,9 @@ theorem testBit_div2 {n : Nat} : n.div2.testBit i = n.testBit (i + 1) :=
 theorem bit_add_bit (b d : Bool) (n m : Nat) :
     bit b n + bit d m =
     bif b then bit (!d) (n + m + d.toNat) else bit d (n + m) := by
-  induction m
-  · cases d with | false => cases b <;> rfl | true => cases b <;> induction n <;> grind
-  · cases d <;> cases b <;> grind
+  fun_induction m.bit d
+  · fun_induction n.bit b <;> grind [cases Bool]
+  · grind [cases Bool]
 
 theorem bit_add_bit_false (b : Bool) (n m : Nat) :
     bit b n + bit false m = bit b (n + m) := by grind
@@ -181,32 +181,15 @@ theorem bit_val : n.bit b = 2 * n + b.toNat := congrFun (congrFun bit_eq_bitImpl
 theorem bit_false : bit false n = 2 * n := bit_val
 theorem bit_true : bit true n = 2 * n + 1 := bit_val
 
-/-! ### div2, bodd, bit -/
-
-@[simp, grind =] theorem bodd_bit {b : Bool} (n : Nat) : (n.bit b).bodd = b := by
-  fun_induction bit <;> grind [cases Bool]
-
-@[simp, grind =] theorem div2_bit {b : Bool} (n : Nat) : (n.bit b).div2 = n := by
-  fun_induction bit <;> grind [cases Bool]
-
-@[simp, grind =] theorem bit_bodd_div2 (n : Nat) : n.div2.bit n.bodd = n := by
-  fun_induction div2 <;> grind
-
-theorem ext_div2_bodd {n m : Nat} (h0 : n.div2 = m.div2) (h1 : n.bodd = m.bodd) : n = m :=
-  n.bit_bodd_div2.symm.trans (h0 ▸ h1 ▸ m.bit_bodd_div2)
-
-theorem ext_div2_bodd_iff (n m : Nat) : n = m ↔ n.div2 = m.div2 ∧ n.bodd = m.bodd := by
-  grind [ext_div2_bodd]
+@[simp, grind =]
+theorem bit_inj (n m : Nat) (b d : Bool) : n.bit b = m.bit d ↔ n = m ∧ b = d := by
+  fun_induction n.bit b generalizing m <;> grind [cases Bool, cases Nat]
 
 theorem eq_of_bit_eq (n m : Nat) {b d : Bool} (h : n.bit b = bit d m) : n = m := by
-  simpa using congrArg div2 h
+  grind
 
 theorem bool_eq_of_bit_eq (n m : Nat) {b d : Bool} (h : n.bit b = bit d m) : b = d := by
-  simpa using congrArg bodd h
-
-@[simp]
-theorem bit_inj (n m : Nat) (b d : Bool) : n.bit b = bit d m ↔ n = m ∧ b = d := by
-  grind [eq_of_bit_eq, bool_eq_of_bit_eq]
+  grind
 
 @[simp] theorem bit_eq_zero_iff : n.bit b = 0 ↔ n = 0 ∧ b = false := bit_inj n 0 b false
 theorem bit_ne_zero_iff : n.bit b ≠ 0 ↔ n ≠ 0 ∨ b = true := by grind [bit_eq_zero_iff]
@@ -223,6 +206,42 @@ theorem bit_true_ne_zero : bit true n ≠ 0 := by grind [bit_eq_zero_iff]
 instance {n : Nat} [NeZero n] : NeZero (n.bit b) := ⟨bit_ne_zero_of_ne_zero <| NeZero.ne _⟩
 
 instance : NeZero (bit true n) := ⟨bit_true_ne_zero⟩
+
+@[grind =]
+theorem bit_lt_bit (n m : Nat) (b d : Bool) : bit b n < bit d m ↔ n < m + ((!b) && d).toNat := by
+  fun_induction n.bit b generalizing m <;> fun_cases m.bit d <;> grind [cases Bool]
+
+@[grind =]
+theorem bit_lt_bit_of_eq (n m : Nat) (b : Bool) : bit b n < bit b m ↔ n < m := by grind [cases Bool]
+
+@[grind =]
+theorem bit_le_bit_of_eq : bit b n ≤ bit b m ↔ n ≤ m := by grind [Nat.le_iff_lt_or_eq]
+
+@[grind =]
+theorem zero_lt_bit_iff : 0 < bit b k ↔ 0 < k ∨ b = true := by grind
+
+@[simp]
+theorem zero_lt_bit_false : 0 < bit false k ↔ 0 < k := by grind
+
+@[simp]
+theorem zero_lt_bit_true : 0 < bit true k := by grind
+
+/-! ### div2, bodd, bit -/
+
+@[simp, grind =] theorem bodd_bit {b : Bool} (n : Nat) : (n.bit b).bodd = b := by
+  fun_induction bit <;> grind [cases Bool]
+
+@[simp, grind =] theorem div2_bit {b : Bool} (n : Nat) : (n.bit b).div2 = n := by
+  fun_induction bit <;> grind [cases Bool]
+
+@[simp, grind =] theorem bit_bodd_div2 (n : Nat) : n.div2.bit n.bodd = n := by
+  fun_induction div2 <;> grind
+
+theorem ext_div2_bodd {n m : Nat} (h0 : n.div2 = m.div2) (h1 : n.bodd = m.bodd) : n = m :=
+  n.bit_bodd_div2.symm.trans (h0 ▸ h1 ▸ m.bit_bodd_div2)
+
+theorem ext_div2_bodd_iff (n m : Nat) : n = m ↔ n.div2 = m.div2 ∧ n.bodd = m.bodd := by
+  grind [ext_div2_bodd]
 
 theorem exists_bit (n : Nat) : ∃ b m, n = bit b m := ⟨n.bodd, n.div2, n.bit_bodd_div2.symm⟩
 
@@ -322,6 +341,39 @@ theorem size_bit_of_ne_zero (hn : n ≠ 0) : size (n.bit b) = size n + 1 := by g
   size_bit_of_ne_zero (NeZero.ne _)
 
 theorem size_bit_add_two : size (n.bit b + 2) = size (n + 1) + 1 := by simp
+
+/-! ### popcount -/
+
+@[simp, grind =] theorem popcount_zero : popcount 0 = 0 := by simp [popcount]
+@[simp, grind =] theorem popcount_one : popcount 1 = 1 := by simp [popcount]
+@[simp, grind =] theorem popcount_add_two : popcount (n + 2) =
+    popcount (n.div2 + 1) + n.bodd.toNat := by simp [popcount, flip]
+
+@[grind =]
+theorem popcount_succ : popcount (n + 1) = if n = 0 then 1 else
+    popcount (n.div2 + n.bodd.toNat) + (!n.bodd).toNat := binaryElim_succ
+
+@[simp, grind =]
+theorem popcount_bit : popcount (n.bit b) = popcount n + b.toNat :=
+  calc  _ = if n = 0 then b.toNat else popcount n + b.toNat := binaryElim_bit
+        _ = _ := by grind
+
+theorem popcount_eq_zero_iff : popcount n = 0 ↔ n = 0 := by
+  induction n using binaryInduction <;> grind
+
+theorem popcount_ne_zero_iff : popcount n ≠ 0 ↔ n ≠ 0 := by
+  grind [popcount_eq_zero_iff]
+
+@[grind =>]
+theorem popcount_ne_zero_of_ne_zero (hn : n ≠ 0) : popcount n ≠ 0 :=
+  popcount_ne_zero_iff.mpr hn
+
+instance [NeZero n] : NeZero (popcount n) := ⟨popcount_ne_zero_of_ne_zero <| NeZero.ne _⟩
+
+theorem popcount_succ_ne_zero : popcount (n + 1) ≠ 0 := NeZero.ne _
+
+theorem popcount_le_size : popcount n ≤ size n := by
+  induction n using binaryInduction <;> grind
 
 /-! ### bitsList -/
 
@@ -533,33 +585,3 @@ theorem leastBitsList_inj : leastBitsList n = leastBitsList m ↔ n = m :=
 
 theorem ofLeastBitsList_inj : ofLeastBitsList oxs = ofLeastBitsList oys ↔ oxs = oys :=
   injective_ofLeastBitsList.eq_iff
-
-/-! ### popcount -/
-
-@[simp, grind =] theorem popcount_zero : popcount 0 = 0 := by simp [popcount]
-@[simp, grind =] theorem popcount_one : popcount 1 = 1 := by simp [popcount]
-@[simp, grind =] theorem popcount_add_two : popcount (n + 2) =
-    popcount (n.div2 + 1) + n.bodd.toNat := by simp [popcount, flip]
-
-@[grind =]
-theorem popcount_succ : popcount (n + 1) = if n = 0 then 1 else
-    popcount (n.div2 + n.bodd.toNat) + (!n.bodd).toNat := binaryElim_succ
-
-@[simp, grind =]
-theorem popcount_bit : popcount (n.bit b) = popcount n + b.toNat :=
-  calc  _ = if n = 0 then b.toNat else popcount n + b.toNat := binaryElim_bit
-        _ = _ := by grind
-
-theorem popcount_eq_zero_iff : popcount n = 0 ↔ n = 0 := by
-  induction n using binaryInduction <;> grind
-
-theorem popcount_ne_zero_iff : popcount n ≠ 0 ↔ n ≠ 0 := by
-  grind [popcount_eq_zero_iff]
-
-@[grind =>]
-theorem popcount_ne_zero_of_ne_zero (hn : n ≠ 0) : popcount n ≠ 0 :=
-  popcount_ne_zero_iff.mpr hn
-
-instance [NeZero n] : NeZero (popcount n) := ⟨popcount_ne_zero_of_ne_zero <| NeZero.ne _⟩
-
-theorem popcount_succ_ne_zero : popcount (n + 1) ≠ 0 := NeZero.ne _
