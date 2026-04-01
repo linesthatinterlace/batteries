@@ -12,16 +12,21 @@ namespace Nat
 
 /-- `bit b n` appends the digit `b` to the little end of the binary representation of `n`. -/
 def bit (b : Bool) : Nat → Nat | 0 => b.toNat | n + 1 => bit b n + 2
-/-- `bodd n` returns `true` if `n` is odd -/
-def bodd : Nat → Bool | 0 => false | 1 => true | n + 2 => n.bodd
+/-- `isOdd n` returns `true` just when `n` is odd -/
+def isOdd : Nat → Bool | 0 => false | 1 => true | n + 2 => n.isOdd
+/-- `isEven n` returns `true` just when `n` is even -/
+def isEven : Nat → Bool | 0 => true | 1 => false | n + 2 => n.isEven
 /-- `div2 n` is the greatest integer smaller than `n/2` -/
 def div2 : Nat → Nat | 0 | 1 => 0 | n + 2 => n.div2 + 1
 
 /-- Efficient implementation of bit. -/
 @[inline] def bitImpl (b : Bool) (n : Nat) : Nat := 2 * n + b.toNat
 
-/-- Efficient implementation of bodd. -/
-@[inline] def boddImpl (n : Nat) : Bool := 1 &&& n != 0
+/-- Efficient implementation of isOdd. -/
+@[inline] def isOddImpl (n : Nat) : Bool := 1 &&& n != 0
+
+/-- Efficient implementation of isOdd. -/
+@[inline] def isEvenImpl (n : Nat) : Bool := !(1 &&& n != 0)
 
 /-- Efficient implementation of div2. -/
 @[inline] def div2Impl (n : Nat) : Nat := n >>> 1
@@ -38,7 +43,7 @@ def div2 : Nat → Nat | 0 | 1 => 0 | n + 2 => n.div2 + 1
 /-- Fold over the binary digits of a natural number, from least significant to most significant.
   Base cases are provided for `0` and `1`; all other numbers are folded via their `bit` digits. -/
 def binaryElim {α : Sort u} (zero : α) (one : α) (bit : Bool → α → α) : Nat → α
-  | 0 => zero | 1 => one | n + 2 => bit n.bodd <| (n.div2Impl + 1).binaryElim zero one bit
+  | 0 => zero | 1 => one | n + 2 => bit n.isOdd <| (n.div2Impl + 1).binaryElim zero one bit
   termination_by n => n decreasing_by grind [div2Impl, shiftRight_le]
 
 /-- `size n` : Returns the size of a natural number in

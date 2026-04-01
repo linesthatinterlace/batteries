@@ -104,22 +104,37 @@ theorem and_or_left_injective {m x y : Nat} : m &&& x = m &&& y → m ||| x = m 
 theorem and_or_left_inj {m x y : Nat} : m &&& x = m &&& y ∧ m ||| x = m ||| y ↔ x = y :=
   ⟨fun ⟨ha, ho⟩ => and_or_left_injective ha ho, fun | rfl => ⟨rfl, rfl⟩⟩
 
-/-! ### bodd -/
+/-! ### isOdd -/
 
-@[simp, grind =] theorem bodd_zero : bodd 0 = false := rfl
-@[simp, grind =] theorem bodd_one : bodd 1 = true := rfl
-@[simp, grind =] theorem bodd_add_two : bodd (n + 2) = bodd n := rfl
+@[simp, grind =] theorem isOdd_zero : isOdd 0 = false := rfl
+@[simp, grind =] theorem isOdd_one : isOdd 1 = true := rfl
+@[simp, grind =] theorem isOdd_add_two : isOdd (n + 2) = isOdd n := rfl
 
-@[grind =] theorem bodd_succ : bodd (n + 1) = !(bodd n) := by induction n <;> grind
+@[grind =] theorem isOdd_succ : isOdd (n + 1) = !(isOdd n) := by fun_induction isOdd <;> grind
 
-@[csimp]
-theorem bodd_eq_boddImpl : bodd = boddImpl := by
-  funext; fun_induction bodd <;> grind [boddImpl]
+@[grind =_]
+theorem isOdd_val : isOdd n = n.testBit 0 := by fun_induction isOdd <;> grind
+@[csimp] theorem isOdd_eq_isOddImpl : isOdd = isOddImpl := funext (fun _ => isOdd_val)
 
-theorem bodd_val : bodd n = n.testBit 0 := congrFun bodd_eq_boddImpl n
+/-! ### isEven -/
 
-@[grind =]
-theorem testBit_zero_eq_bodd {n : Nat} : n.testBit 0 = n.bodd := bodd_val.symm
+@[simp, grind =] theorem isEven_zero : isEven 0 = true := rfl
+@[simp, grind =] theorem isEven_one : isEven 1 = false := rfl
+@[simp, grind =] theorem isEven_add_two : isEven (n + 2) = isEven n := rfl
+
+@[grind =] theorem isEven_succ : isEven (n + 1) = !(isEven n) := by fun_induction isEven <;> grind
+
+theorem isEven_val : isEven n = !(n.testBit 0) := by fun_induction isEven <;> grind
+@[csimp] theorem isEven_eq_isEvenImpl : isEven = isEvenImpl := funext (fun _ => isEven_val)
+
+/-! ### isOdd, isEven -/
+
+theorem not_isOdd : (!(isOdd n)) = isEven n := by fun_induction isOdd <;> grind
+
+@[simp, grind =]
+theorem isEven_eq : isEven n = !(isOdd n) := not_isOdd.symm
+
+theorem not_isEven : (!(isEven n)) = isOdd n := by simp
 
 /-! ### div2 -/
 
@@ -131,7 +146,7 @@ theorem testBit_zero_eq_bodd {n : Nat} : n.testBit 0 = n.bodd := bodd_val.symm
 theorem div2_eq_div2Impl : div2 = div2Impl := by
   funext; fun_induction div2 <;> grind [div2Impl, Nat.shiftRight_eq_div_pow]
 
-@[grind =] theorem div2_succ : div2 (n + 1) = n.div2 + n.bodd.toNat := by induction n <;> grind
+@[grind =] theorem div2_succ : div2 (n + 1) = n.div2 + n.isOdd.toNat := by induction n <;> grind
 
 theorem div2_val : div2 n = n / 2 := congrFun div2_eq_div2Impl n
 
@@ -226,27 +241,29 @@ theorem zero_lt_bit_false : 0 < bit false k ↔ 0 < k := by grind
 @[simp]
 theorem zero_lt_bit_true : 0 < bit true k := by grind
 
-/-! ### div2, bodd, bit -/
+/-! ### div2, isOdd, bit -/
 
-@[simp, grind =] theorem bodd_bit {b : Bool} (n : Nat) : (n.bit b).bodd = b := by
+@[simp, grind =] theorem isOdd_bit {b : Bool} (n : Nat) : (n.bit b).isOdd = b := by
   fun_induction bit <;> grind [cases Bool]
+
+theorem isEven_bit {b : Bool} (n : Nat) : (n.bit b).isEven = !b := by simp
 
 @[simp, grind =] theorem div2_bit {b : Bool} (n : Nat) : (n.bit b).div2 = n := by
   fun_induction bit <;> grind [cases Bool]
 
-@[simp, grind =] theorem bit_bodd_div2 (n : Nat) : n.div2.bit n.bodd = n := by
+@[simp, grind =] theorem bit_isOdd_div2 (n : Nat) : n.div2.bit n.isOdd = n := by
   fun_induction div2 <;> grind
 
-theorem ext_div2_bodd {n m : Nat} (h0 : n.div2 = m.div2) (h1 : n.bodd = m.bodd) : n = m :=
-  n.bit_bodd_div2.symm.trans (h0 ▸ h1 ▸ m.bit_bodd_div2)
+theorem ext_div2_isOdd {n m : Nat} (h0 : n.div2 = m.div2) (h1 : n.isOdd = m.isOdd) : n = m :=
+  n.bit_isOdd_div2.symm.trans (h0 ▸ h1 ▸ m.bit_isOdd_div2)
 
-theorem ext_div2_bodd_iff (n m : Nat) : n = m ↔ n.div2 = m.div2 ∧ n.bodd = m.bodd := by
-  grind [ext_div2_bodd]
+theorem ext_div2_isOdd_iff (n m : Nat) : n = m ↔ n.div2 = m.div2 ∧ n.isOdd = m.isOdd := by
+  grind [ext_div2_isOdd]
 
-theorem exists_bit (n : Nat) : ∃ b m, n = bit b m := ⟨n.bodd, n.div2, n.bit_bodd_div2.symm⟩
+theorem exists_bit (n : Nat) : ∃ b m, n = bit b m := ⟨n.isOdd, n.div2, n.bit_isOdd_div2.symm⟩
 
-theorem exists_div2_bodd (b : Bool) (n : Nat) : ∃ m : Nat, m.bodd = b ∧ m.div2 = n :=
-  ⟨n.bit b, n.bodd_bit, n.div2_bit⟩
+theorem exists_div2_isOdd (b : Bool) (n : Nat) : ∃ m : Nat, m.isOdd = b ∧ m.div2 = n :=
+  ⟨n.bit b, n.isOdd_bit, n.div2_bit⟩
 
 theorem testBit_bit_zero {n : Nat} : (n.bit b).testBit 0 = b := by grind
 theorem testBit_bit_add_one {n : Nat} : (n.bit b).testBit (m + 1) = n.testBit m := by grind
@@ -290,7 +307,7 @@ variable {zero : α} {one : α} {bit : Bool → α → α}
     binaryElim zero one bit 0 = zero := by simp [binaryElim]
 @[simp, grind =] theorem binaryElim_one : binaryElim zero one bit 1 = one := by simp [binaryElim]
 @[simp, grind =] theorem binaryElim_add_two : binaryElim zero one bit (n + 2) =
-    bit n.bodd (binaryElim zero one bit (n.div2 + 1)) := by simp [binaryElim, div2_eq_div2Impl]
+    bit n.isOdd (binaryElim zero one bit (n.div2 + 1)) := by simp [binaryElim, div2_eq_div2Impl]
 
 theorem binaryElim_bit :
     binaryElim zero one bit (n.bit b) = if n = 0 then bif b then one else zero else
@@ -298,8 +315,8 @@ theorem binaryElim_bit :
 
 theorem binaryElim_succ :
     binaryElim zero one bit (n + 1) = if n = 0 then one else
-    bit (!n.bodd) (binaryElim zero one bit (n.div2 + n.bodd.toNat)) := by
-  cases n with | zero => grind | succ n => cases h : n.bodd <;> grind
+    bit (!n.isOdd) (binaryElim zero one bit (n.div2 + n.isOdd.toNat)) := by
+  cases n with | zero => grind | succ n => cases h : n.isOdd <;> grind
 
 end
 
@@ -315,7 +332,7 @@ theorem binaryElim_zero_one_bit : binaryElim 0 1 bit = id := funext binaryElim_z
 @[simp, grind =] theorem size_add_two : size (n + 2) = size (n.div2 + 1) + 1 := by simp [size]
 
 @[grind =]
-theorem size_succ : size (n + 1) = if n = 0 then 1 else size (n.div2 + n.bodd.toNat) + 1 :=
+theorem size_succ : size (n + 1) = if n = 0 then 1 else size (n.div2 + n.isOdd.toNat) + 1 :=
   binaryElim_succ
 
 theorem size_eq_zero_iff : size n = 0 ↔ n = 0 := by grind [cases Nat]
@@ -347,11 +364,11 @@ theorem size_bit_add_two : size (n.bit b + 2) = size (n + 1) + 1 := by simp
 @[simp, grind =] theorem popcount_zero : popcount 0 = 0 := by simp [popcount]
 @[simp, grind =] theorem popcount_one : popcount 1 = 1 := by simp [popcount]
 @[simp, grind =] theorem popcount_add_two : popcount (n + 2) =
-    popcount (n.div2 + 1) + n.bodd.toNat := by simp [popcount, flip]
+    popcount (n.div2 + 1) + n.isOdd.toNat := by simp [popcount, flip]
 
 @[grind =]
 theorem popcount_succ : popcount (n + 1) = if n = 0 then 1 else
-    popcount (n.div2 + n.bodd.toNat) + (!n.bodd).toNat := binaryElim_succ
+    popcount (n.div2 + n.isOdd.toNat) + (!n.isOdd).toNat := binaryElim_succ
 
 @[simp, grind =]
 theorem popcount_bit : popcount (n.bit b) = popcount n + b.toNat :=
@@ -379,12 +396,12 @@ theorem popcount_le_size : popcount n ≤ size n := by
 
 @[simp, grind =] theorem bitsList_zero : bitsList 0 = [] := by simp [bitsList]
 @[simp, grind =] theorem bitsList_one : bitsList 1 = [true] := by simp [bitsList]
-@[simp, grind =] theorem bitsList_add_two : bitsList (n + 2) = n.bodd ::
+@[simp, grind =] theorem bitsList_add_two : bitsList (n + 2) = n.isOdd ::
     bitsList (n.div2 + 1) := by simp [bitsList]
 
 @[grind =]
 theorem bitsList_succ : bitsList (n + 1) = if n = 0 then [true] else
-  (!n.bodd) :: bitsList (n.div2 + n.bodd.toNat) := binaryElim_succ
+  (!n.isOdd) :: bitsList (n.div2 + n.isOdd.toNat) := binaryElim_succ
 
 @[grind =]
 theorem bitsList_bit : bitsList (n.bit b) =
@@ -500,7 +517,7 @@ theorem bitsList_ofBitsList_of_getLast_eq_true {bs : List Bool} (hbs₁ : bs ≠
 @[simp, grind =] theorem leastBitsList_zero : leastBitsList 0 = none := by simp [leastBitsList]
 @[grind =] theorem leastBitsList_one : leastBitsList 1 = some [] := by simp [leastBitsList]
 @[simp, grind =] theorem leastBitsList_add_two : leastBitsList (n + 2) =
-    (n.div2 + 1).leastBitsList.map (n.bodd :: ·) := by simp [leastBitsList]
+    (n.div2 + 1).leastBitsList.map (n.isOdd :: ·) := by simp [leastBitsList]
 
 @[grind =]
 theorem leastBitsList_eq :
