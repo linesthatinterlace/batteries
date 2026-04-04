@@ -6,7 +6,7 @@ Authors: François G. Dorais, Wrenna Robson
 
 module
 
-public import Batteries.Data.Nat.Bitwise.Defs
+public import Batteries.Data.Nat.Bitwise.Basic
 
 @[expose] public section
 
