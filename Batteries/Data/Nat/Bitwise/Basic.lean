@@ -46,17 +46,18 @@ def div2 : Nat → Nat | 0 | 1 => 0 | n + 2 => n.div2 + 1
 @[csimp] theorem div2_eq_div2Impl : div2 = div2Impl := funext <| fun _ => by
   fun_induction div2 <;> grind [div2Impl, Nat.shiftRight_succ]
 
-/-- A recursion principle for `bit` representations of natural numbers.
-  We have base cases for `0` and `1`: all other natural numbers are of the form
-  `bit b (n + 1)` and `n + 1 < bit b (n + 1)`.-/
+/-- A bitwise recursion principle for  natural numbers.
+  We have base cases for `0` and `1`: for all other natural numbers `n + 2`,
+  the case for `n.div2 + 1` suffices. -/
 @[elab_as_elim, specialize]
- def binaryInduction {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
-    (bit : ∀ n, motive (n.div2 + 1) → motive (n + 2)) : ∀ n, motive n
-  | 0 => zero | 1 => one | n + 2 => bit n <| (n.div2 + 1).binaryInduction zero one bit
+ def binaryRec {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
+    (add_two : ∀ n, motive (n.div2 + 1) → motive (n + 2)) : ∀ n, motive n
+  | 0 => zero | 1 => one | n + 2 => add_two n <| (n.div2 + 1).binaryRec zero one div2
   termination_by n => n decreasing_by fun_induction div2 <;> grind
 
 /-- Elim over the binary digits of a natural number, from least significant to most significant.
-  Base cases are provided for `0` and `1`; all other numbers are folded via their `bit` digits. -/
+    Base cases are provided for `0`, `1`. All other numbers are folded via their binary digits. -/
+@[specialize]
 def binaryElim {α : Sort u} (zero one : α) (bit : Bool → α → α) : Nat → α
   | 0 => zero | 1 => one | n + 2 => bit n.isOdd <| (n.div2Impl + 1).binaryElim zero one bit
   termination_by n => n decreasing_by grind [div2Impl, shiftRight_le]
@@ -86,3 +87,19 @@ def leastBitsList (n : Nat) : Option (List Bool) :=
   bit (and is `0` just when the `Option` is empty). -/
 def ofLeastBitsList (oxs : Option (List Bool)) : Nat :=
   oxs.elim 0 (Nat.add.uncurry <| ·.foldr (Prod.map (Nat.bit false) <| Nat.bit ·) (1, 0))
+
+/-- A recursion principle over the even natural numbers. -/
+@[elab_as_elim, specialize]
+ def evenRec {motive : (n : Nat) → n.isEven → Sort u} (zero : motive 0 rfl)
+    (succ_succ : ∀ n h, motive n h → motive (n + 2) h) :
+    (n : Nat) → (hn : n.isEven) → motive n hn
+  | 0, _ => zero
+  | n + 2, h => succ_succ n h (evenRec zero succ_succ n h)
+
+/-- A recursion principle over the odd natural numbers. -/
+@[elab_as_elim, specialize]
+ def oddRec {motive : (n : Nat) → n.isOdd → Sort u} (one : motive 1 rfl)
+    (succ_succ : ∀ n h, motive n h → motive (n + 2) h) :
+    (n : Nat) → (hn : n.isOdd) → motive n hn
+  | 1, _ => one
+  | n + 2, h => succ_succ n h (oddRec one succ_succ n h)
