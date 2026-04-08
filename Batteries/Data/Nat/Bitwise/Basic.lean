@@ -52,7 +52,7 @@ def div2 : Nat → Nat | 0 | 1 => 0 | n + 2 => n.div2 + 1
 @[elab_as_elim, specialize]
  def binaryRec {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
     (add_two : ∀ n, motive (n.div2 + 1) → motive (n + 2)) : ∀ n, motive n
-  | 0 => zero | 1 => one | n + 2 => add_two n <| (n.div2 + 1).binaryRec zero one div2
+  | 0 => zero | 1 => one | n + 2 => add_two n <| (n.div2 + 1).binaryRec zero one add_two
   termination_by n => n decreasing_by fun_induction div2 <;> grind
 
 /-- Elim over the binary digits of a natural number, from least significant to most significant.
