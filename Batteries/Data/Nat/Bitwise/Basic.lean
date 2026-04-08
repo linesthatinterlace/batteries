@@ -93,13 +93,20 @@ def ofLeastBitsList (oxs : Option (List Bool)) : Nat :=
  def evenRec {motive : (n : Nat) → n.isEven → Sort u} (zero : motive 0 rfl)
     (succ_succ : ∀ n h, motive n h → motive (n + 2) h) :
     (n : Nat) → (hn : n.isEven) → motive n hn
-  | 0, _ => zero
-  | n + 2, h => succ_succ n h (evenRec zero succ_succ n h)
+  | 0, _ => zero | n + 2, h => succ_succ n h (evenRec zero succ_succ n h)
 
 /-- A recursion principle over the odd natural numbers. -/
 @[elab_as_elim, specialize]
  def oddRec {motive : (n : Nat) → n.isOdd → Sort u} (one : motive 1 rfl)
     (succ_succ : ∀ n h, motive n h → motive (n + 2) h) :
     (n : Nat) → (hn : n.isOdd) → motive n hn
-  | 1, _ => one
-  | n + 2, h => succ_succ n h (oddRec one succ_succ n h)
+  | 1, _ => one | n + 2, h => succ_succ n h (oddRec one succ_succ n h)
+
+/-- By starting with `0` and `1` base cases and given we can induct over even and odd
+  numbers, we can achieve a motive for any `n`. -/
+@[elab_as_elim, specialize]
+ def parityRec {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
+    (odd : ∀ n, n.isOdd → motive n → motive (n + 2))
+    (even : ∀ n, n.isEven → motive n → motive (n + 2)) (n : Nat) : motive n :=
+  if hn : n.isOdd then oddRec one odd n hn
+  else evenRec zero even n (by fun_induction isEven <;> grind [isOdd])

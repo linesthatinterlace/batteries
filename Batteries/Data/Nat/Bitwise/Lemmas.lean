@@ -187,7 +187,7 @@ theorem div2_val {n} : div2 n = n / 2 := congrFun div2_eq_div2Impl n
 theorem testBit_div2 {i n : Nat} : n.div2.testBit i = n.testBit (i + 1) :=
   (congrArg (testBit · i) div2_val).trans (testBit_div_two _ _)
 
-@[simp, grind =]
+@[simp, grind .]
 theorem div2_eq_zero_iff {n : Nat} : n.div2 = 0 ↔ n = 0 ∨ n = 1 := by fun_cases Nat.div2 <;> grind
 
 /-! ### bit -/
