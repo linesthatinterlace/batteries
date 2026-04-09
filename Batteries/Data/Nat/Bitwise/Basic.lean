@@ -10,6 +10,8 @@ module
 
 namespace Nat
 
+/-! ## Basic functions -/
+
 /-- `bit b n` appends the digit `b` to the little end of the binary representation of `n`. -/
 def bit (b : Bool) : Nat → Nat | 0 => b.toNat | n + 1 => bit b n + 2
 
@@ -37,56 +39,19 @@ def isEven : Nat → Bool | 0 => true | 1 => false | n + 2 => n.isEven
 @[csimp] theorem isEven_eq_isEvenImpl : isEven = isEvenImpl := funext <| fun _ => by
   fun_induction isEven <;> grind [isEvenImpl]
 
-/-- `div2 n` is the greatest integer smaller than `n/2` -/
-def div2 : Nat → Nat | 0 | 1 => 0 | n + 2 => n.div2 + 1
+/-- `divTwo n` is the greatest integer smaller than `n/2` -/
+def divTwo : Nat → Nat | 0 | 1 => 0 | n + 2 => n.divTwo + 1
 
-/-- Efficient implementation of div2. -/
-@[inline] def div2Impl (n : Nat) : Nat := n >>> 1
+/-- Efficient implementation of divTwo. -/
+@[inline] def divTwoImpl (n : Nat) : Nat := n >>> 1
 
-@[csimp] theorem div2_eq_div2Impl : div2 = div2Impl := funext <| fun _ => by
-  fun_induction div2 <;> grind [div2Impl, Nat.shiftRight_succ]
+@[csimp] theorem divTwo_eq_divTwoImpl : divTwo = divTwoImpl := funext <| fun _ => by
+  fun_induction divTwo <;> grind [divTwoImpl, Nat.shiftRight_succ]
 
-/-- A bitwise recursion principle for  natural numbers.
-  We have base cases for `0` and `1`: for all other natural numbers `n + 2`,
-  the case for `n.div2 + 1` suffices. -/
-@[elab_as_elim, specialize]
- def div2Rec {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
-    (add_two : ∀ n, motive (n.div2 + 1) → motive (n + 2)) : ∀ n, motive n
-  | 0 => zero | 1 => one | n + 2 => add_two n <| (n.div2 + 1).div2Rec zero one add_two
-  termination_by n => n decreasing_by fun_induction div2 <;> grind
+/-- `isOdd` and `divTwo` as a single map to a tuple. -/
+def isOddDivTwo : Nat → Bool × Nat := fun n => (n.isOdd, n.divTwo)
 
-/-- Elim over the binary digits of a natural number, from least significant to most significant.
-    Base cases are provided for `0`, `1`. All other numbers are folded via their binary digits. -/
-@[specialize]
-def bitElim {α : Sort u} (zero one : α) (bit : Bool → α → α) : Nat → α
-  | 0 => zero | 1 => one | n + 2 => bit n.isOdd <| (n.div2Impl + 1).bitElim zero one bit
-  termination_by n => n decreasing_by grind [div2Impl, shiftRight_le]
-
-/-- `size n` : Returns the size of a natural number in
-bits i.e. the length of its binary representation -/
-def size (n : Nat) : Nat := n.bitElim 0 1 (Function.const Bool succ)
-
-/-- `popcount n` : Returns the number of set bits in a natural number. -/
-def popcount (n : Nat) : Nat := n.bitElim 0 1 (flip (· + ·.toNat))
-
-/-- `bitsList n` returns a list of Bools which correspond to the binary representation of n, where
-the head of the list represents the least significant bit. -/
-def bitsList (n : Nat) : List Bool := n.bitElim [] [true] List.cons
-
-/-- `ofBitsList bs` constructs a natural number from a list of bits using little endian
-  convention. -/
-@[inline] def ofBitsList (xs : List Bool) : Nat :=
-  xs.foldr bit 0
-
-/-- `leastBitsList n` returns, for non-zero `n`, `some l`, where `l` is a list of the bits below the
-  most significant bit of `n`. It returns `none` just when `n = 0`. -/
-def leastBitsList (n : Nat) : Option (List Bool) :=
-  n.bitElim none (some []) (Option.map <| List.cons ·)
-
-/-- `ofLeastBitsList oxs` constructs a natural number from the bits below its most signficant
-  bit (and is `0` just when the `Option` is empty). -/
-def ofLeastBitsList (oxs : Option (List Bool)) : Nat :=
-  oxs.elim 0 (Nat.add.uncurry <| ·.foldr (Prod.map (Nat.bit false) <| Nat.bit ·) (1, 0))
+/-! ## Recursion principles -/
 
 /-- A recursion principle over the even natural numbers. -/
 @[elab_as_elim, specialize]
@@ -110,3 +75,63 @@ def ofLeastBitsList (oxs : Option (List Bool)) : Nat :=
     (even : ∀ n, n.isEven → motive n → motive (n + 2)) (n : Nat) : motive n :=
   if hn : n.isOdd then oddRec one odd n hn
   else evenRec zero even n (by fun_induction isEven <;> grind [isOdd])
+
+/-- A base-2 recursion principle for natural numbers. We have base cases for `0` and `1`: for all
+  other natural numbers `n + 2`, the case for `n.divTwo + 1` suffices. -/
+@[elab_as_elim, specialize]
+ def divTwoRecFromOne {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
+    (add_two : ∀ n, motive (n.divTwo + 1) → motive (n + 2)) : ∀ n, motive n
+  | 0 => zero | 1 => one | n + 2 => add_two n <| (n.divTwo + 1).divTwoRecFromOne zero one add_two
+  termination_by n => n decreasing_by fun_induction divTwo <;> grind
+
+/-- A base-2 recursion principle for  natural numbers. We have a base case for `0` for all other
+  natural numbers `n + 1`, the case for `(n + 1).divTwo` suffices. -/
+@[elab_as_elim, specialize]
+ def divTwoRec {motive : Nat → Sort u} (zero : motive 0)
+    (add_one : ∀ n, motive (n + 1).divTwo → motive (n + 1)) : ∀ n, motive n :=
+  divTwoRecFromOne zero (add_one 0 zero) (add_one <| · + 1)
+
+/-- Iterates over the binary digits of a natural number, from least significant to most significant.
+    Base cases are provided for `0`, `1`. All other numbers are folded via their binary digits. -/
+@[inline]
+def bitElimFromOne {α : Sort u} (zero one : α) (bit : Bool → α → α) (n : Nat) : α := go id n where
+  @[specialize] go (k : α → α) :
+    Nat → α | 0 => k zero | 1 => k one | n + 2 => go (k ∘ bit n.isOdd) (n.divTwo + 1)
+  decreasing_by fun_induction divTwo <;> grind
+
+/-- Iterates over the binary digits of a natural number, from least significant to most significant.
+    A base case is provided for `0`. Thereafter we iterate over the number's bits. -/
+@[specialize] def bitElim {α : Sort u} (zero : α) (bit : Bool → α → α) : Nat → α :=
+  bitElimFromOne zero (bit true zero) bit
+
+/-- `size n` : Returns the size of a natural number in
+bits i.e. the length of its binary representation -/
+def size (n : Nat) : Nat := n.bitElim 0 (Function.const Bool succ)
+
+/-- `popcount n` : Returns the number of set bits in a natural number. -/
+def popcount (n : Nat) : Nat := n.bitElim 0 (flip (· + ·.toNat))
+
+/-- `bitsList n` returns a list of Bools which correspond to the binary representation of n, where
+the head of the list represents the least significant bit. -/
+def bitsList (n : Nat) : List Bool := n.bitElim [] List.cons
+
+/-- `ofBitsList bs` constructs a natural number from a list of bits using little endian
+  convention. -/
+@[inline] def ofBitsList (xs : List Bool) : Nat := xs.foldr bit 0
+
+/-- `leastBitsList n` returns, for non-zero `n`, `some l`, where `l` is a list of the bits below the
+  most significant bit of `n`. It returns `none` just when `n = 0`. -/
+def leastBitsList (n : Nat) : Option (List Bool) :=
+  n.bitElimFromOne none (some []) (Option.map <| List.cons ·)
+
+/-- `ofLeastBitsList oxs` constructs a natural number from the bits below its most signficant
+  bit (and is `0` just when the `Option` is empty). -/
+def ofLeastBitsList (oxs : Option (List Bool)) : Nat :=
+  oxs.elim 0 (Nat.add.uncurry <| ·.foldr (Prod.map (Nat.bit false) <| Nat.bit ·) (1, 0))
+
+/-- Apply an unary boolean operator bitwise on a natural number. -/
+@[specialize] def bitUnary (f : Bool → Bool) : Nat → Nat := bitElim 0 (bit ∘ f)
+
+/-- Apply a binary boolean operator bitwise on a pair of natural numbers. -/
+@[specialize] def bitBinary (f : Bool → Bool → Bool) : Nat → Nat → Nat :=
+  bitElim (bitUnary <| f false) (fun b rec => bit.uncurry ∘ Prod.map (f b) rec ∘ isOddDivTwo)
