@@ -79,41 +79,34 @@ def isOddDivTwo : Nat → Bool × Nat := fun n => (n.isOdd, n.divTwo)
 /-- A base-2 recursion principle for natural numbers. We have base cases for `0` and `1`: for all
   other natural numbers `n + 2`, the case for `n.divTwo + 1` suffices. -/
 @[elab_as_elim, specialize]
- def divTwoRecFromOne {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
+ def divTwoRec {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
     (add_two : ∀ n, motive (n.divTwo + 1) → motive (n + 2)) : ∀ n, motive n
-  | 0 => zero | 1 => one | n + 2 => add_two n <| (n.divTwo + 1).divTwoRecFromOne zero one add_two
+  | 0 => zero | 1 => one | n + 2 => add_two n <| (n.divTwo + 1).divTwoRec zero one add_two
   termination_by n => n decreasing_by fun_induction divTwo <;> grind
-
-/-- A base-2 recursion principle for  natural numbers. We have a base case for `0` for all other
-  natural numbers `n + 1`, the case for `(n + 1).divTwo` suffices. -/
-@[elab_as_elim, specialize]
- def divTwoRec {motive : Nat → Sort u} (zero : motive 0)
-    (add_one : ∀ n, motive (n + 1).divTwo → motive (n + 1)) : ∀ n, motive n :=
-  divTwoRecFromOne zero (add_one 0 zero) (add_one <| · + 1)
 
 /-- Iterates over the binary digits of a natural number, from least significant to most significant.
     Base cases are provided for `0`, `1`. All other numbers are folded via their binary digits. -/
 @[inline]
-def bitElimFromOne {α : Sort u} (zero one : α) (bit : Bool → α → α) (n : Nat) : α := go id n where
-  @[specialize] go (k : α → α) :
-    Nat → α | 0 => k zero | 1 => k one | n + 2 => go (k ∘ bit n.isOdd) (n.divTwo + 1)
+def bitElim {α : Sort u} (zero one : α) (bit : Bool → α → α) (n : Nat) : α := go id n where
+  @[specialize] go (k : α → α) : Nat → α
+  | 0 => k zero | 1 => k one | n + 2 => go (k ∘ bit n.isOdd) (n.divTwo + 1)
   decreasing_by fun_induction divTwo <;> grind
 
 /-- Iterates over the binary digits of a natural number, from least significant to most significant.
     A base case is provided for `0`. Thereafter we iterate over the number's bits. -/
-@[specialize] def bitElim {α : Sort u} (zero : α) (bit : Bool → α → α) : Nat → α :=
-  bitElimFromOne zero (bit true zero) bit
+@[specialize] abbrev bitElimFromZero {α : Sort u} (zero : α) (bit : Bool → α → α) : Nat → α :=
+  bitElim zero (bit true zero) bit
 
 /-- `size n` : Returns the size of a natural number in
 bits i.e. the length of its binary representation -/
-def size (n : Nat) : Nat := n.bitElim 0 (Function.const Bool succ)
+def size (n : Nat) : Nat := n.bitElimFromZero 0 (Function.const Bool succ)
 
 /-- `popcount n` : Returns the number of set bits in a natural number. -/
-def popcount (n : Nat) : Nat := n.bitElim 0 (flip (· + ·.toNat))
+def popcount (n : Nat) : Nat := n.bitElimFromZero 0 (flip (· + ·.toNat))
 
 /-- `bitsList n` returns a list of Bools which correspond to the binary representation of n, where
 the head of the list represents the least significant bit. -/
-def bitsList (n : Nat) : List Bool := n.bitElim [] List.cons
+def bitsList (n : Nat) : List Bool := n.bitElimFromZero [] List.cons
 
 /-- `ofBitsList bs` constructs a natural number from a list of bits using little endian
   convention. -/
@@ -122,7 +115,7 @@ def bitsList (n : Nat) : List Bool := n.bitElim [] List.cons
 /-- `leastBitsList n` returns, for non-zero `n`, `some l`, where `l` is a list of the bits below the
   most significant bit of `n`. It returns `none` just when `n = 0`. -/
 def leastBitsList (n : Nat) : Option (List Bool) :=
-  n.bitElimFromOne none (some []) (Option.map <| List.cons ·)
+  n.bitElim none (some []) (Option.map <| List.cons ·)
 
 /-- `ofLeastBitsList oxs` constructs a natural number from the bits below its most signficant
   bit (and is `0` just when the `Option` is empty). -/
@@ -130,8 +123,8 @@ def ofLeastBitsList (oxs : Option (List Bool)) : Nat :=
   oxs.elim 0 (Nat.add.uncurry <| ·.foldr (Prod.map (Nat.bit false) <| Nat.bit ·) (1, 0))
 
 /-- Apply an unary boolean operator bitwise on a natural number. -/
-@[specialize] def bitUnary (f : Bool → Bool) : Nat → Nat := bitElim 0 (bit ∘ f)
+@[specialize] def bitUnary (f : Bool → Bool) (n : Nat) : Nat := n.bitElimFromZero 0 (bit ∘ f)
 
 /-- Apply a binary boolean operator bitwise on a pair of natural numbers. -/
-@[specialize] def bitBinary (f : Bool → Bool → Bool) : Nat → Nat → Nat :=
-  bitElim (bitUnary <| f false) (fun b rec => bit.uncurry ∘ Prod.map (f b) rec ∘ isOddDivTwo)
+@[specialize] def bitBinary (f : Bool → Bool → Bool) (n : Nat) : Nat → Nat :=
+  n.bitElimFromZero (bitUnary <| f false) (((bit.uncurry ∘ · ∘ isOddDivTwo) ∘ ·) ∘ Prod.map ∘ f)

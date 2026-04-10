@@ -118,6 +118,12 @@ theorem toNat_isOdd {n} : (isOdd n).toNat = n % 2 := by
 
 theorem isOdd_val {n} : isOdd n = n.testBit 0 := congrFun isOdd_eq_isOddImpl n
 
+attribute [-simp, -grind] testBit_zero
+attribute [-grind] testBit_eq_decide_div_mod_eq
+
+@[simp, grind =]
+theorem testBit_zero_eq_isOdd {n} : n.testBit 0 = isOdd n := isOdd_val.symm
+
 /-! ### isEven -/
 
 @[simp, grind =] theorem isEven_zero : isEven 0 = true := rfl
@@ -183,13 +189,23 @@ theorem isEven_toNat_add_isOdd_toNat {n : Nat} : n.isEven.toNat + n.isOdd.toNat 
 
 theorem divTwo_val {n} : divTwo n = n / 2 := congrFun divTwo_eq_divTwoImpl n
 
-@[simp, grind _=_]
-theorem testBit_divTwo {i n : Nat} : n.divTwo.testBit i = n.testBit (i + 1) :=
-  (congrArg (testBit · i) divTwo_val).trans (testBit_div_two _ _)
+@[grind =]
+theorem testBit_add_one_eq_testBit_divTwo {n i : Nat} :
+    n.testBit (i + 1) = n.divTwo.testBit i := by rw [testBit_add_one, divTwo_val]
+
+theorem testBit_divTwo {n i : Nat} : n.divTwo.testBit i = n.testBit (i + 1) :=
+  testBit_add_one_eq_testBit_divTwo.symm
 
 @[simp, grind .]
 theorem divTwo_eq_zero_iff {n : Nat} : n.divTwo = 0 ↔ n = 0 ∨ n = 1 := by
   fun_cases Nat.divTwo <;> grind
+
+/-! ### testBit -/
+
+theorem testBit_one {i} : testBit 1 i = decide (i = 0) := by cases i <;> grind
+
+theorem testBit_add_two_left {i} : testBit (n + 2) i =
+    if i = 0 then n.isOdd else (n.divTwo + 1).testBit (i - 1) := by cases i <;> grind
 
 /-! ### bit -/
 
@@ -292,8 +308,8 @@ theorem zero_lt_bit_true {k} : 0 < bit true k := by grind
 theorem bit_isEven_divTwo {n : Nat} : n.divTwo.bit n.isEven = if n.isOdd then n - 1 else n + 1 := by
   fun_induction divTwo <;> grind
 
-theorem ext_divTwo_isOdd {n m : Nat} (h0 : n.divTwo = m.divTwo) (h1 : n.isOdd = m.isOdd) : n = m :=
-  n.bit_isOdd_divTwo.symm.trans (h0 ▸ h1 ▸ m.bit_isOdd_divTwo)
+theorem ext_divTwo_isOdd {m n : Nat} (h0 : m.divTwo = n.divTwo) (h1 : m.isOdd = n.isOdd) : m = n :=
+  m.bit_isOdd_divTwo.symm.trans (h0 ▸ h1 ▸ n.bit_isOdd_divTwo)
 
 theorem ext_divTwo_isOdd_iff (n m : Nat) : n = m ↔ n.divTwo = m.divTwo ∧ n.isOdd = m.isOdd := by
   grind [ext_divTwo_isOdd]
@@ -308,7 +324,7 @@ theorem testBit_bit_add_one {b m} {n : Nat} : (n.bit b).testBit (m + 1) = n.test
 
 @[grind =]
 theorem testBit_bit {b m} {n : Nat} : (n.bit b).testBit m =
-    if m = 0 then b else n.testBit (m - 1) := by grind [cases Nat]
+    if m = 0 then b else n.testBit (m - 1) := by grind [cases Nat, testBit_add_two_left]
 
 /-! ### isOddDivTwo -/
 
@@ -326,122 +342,106 @@ theorem isOddDivTwo_succ {n : Nat} : isOddDivTwo (n + 1) =
 theorem leftInverse_isOddDivTwo_uncurry_bit : isOddDivTwo.LeftInverse bit.uncurry := by grind
 theorem rightInverse_isOddDivTwo_uncurry_bit  : isOddDivTwo.RightInverse bit.uncurry := by grind
 
-/-! ### divTwoRecFromOne -/
+/-! ### divTwoRec -/
 
 section
 
 variable {motive : Nat → Sort u} (zero : motive 0) (one : motive 1)
   (add_two : ∀ n, motive (n.divTwo + 1) → motive (n + 2))
 
-@[simp, grind =] theorem divTwoRecFromOne_zero : divTwoRecFromOne zero one add_two 0 = zero := by
-  simp [divTwoRecFromOne]
-@[simp, grind =] theorem divTwoRecFromOne_one : divTwoRecFromOne zero one add_two 1 = one := by
-  simp [divTwoRecFromOne]
-@[simp, grind =] theorem divTwoRecFromOne_add_two {n} : divTwoRecFromOne zero one add_two (n + 2) =
-    add_two n (divTwoRecFromOne zero one add_two (n.divTwo + 1)) := by
-  simp [divTwoRecFromOne]
+@[simp, grind =] theorem divTwoRec_zero : divTwoRec zero one add_two 0 = zero := by
+  simp [divTwoRec]
+@[simp, grind =] theorem divTwoRec_one : divTwoRec zero one add_two 1 = one := by
+  simp [divTwoRec]
+@[simp, grind =] theorem divTwoRec_add_two {n} : divTwoRec zero one add_two (n + 2) =
+    add_two n (divTwoRec zero one add_two (n.divTwo + 1)) := by
+  simp [divTwoRec]
 
-theorem divTwoRecFromOne_bit_zero {b} :
-    divTwoRecFromOne (motive := motive) zero one add_two (Nat.bit b 0) =
+theorem divTwoRec_bit_zero {b} :
+    divTwoRec (motive := motive) zero one add_two (Nat.bit b 0) =
     if h : b = true then h ▸ one else b.of_not_eq_true h ▸ zero := by grind
 
-theorem divTwoRecFromOne_bit_add_two {b} {n : Nat} :
-    divTwoRecFromOne (motive := motive) zero one add_two (n.bit b + 2) =
-    add_two (n.bit b) (n.divTwo_bit.symm ▸ divTwoRecFromOne zero one add_two (n + 1)) := by grind
+theorem divTwoRec_bit_add_two {b} {n : Nat} :
+    divTwoRec (motive := motive) zero one add_two (n.bit b + 2) =
+    add_two (n.bit b) (n.divTwo_bit.symm ▸ divTwoRec zero one add_two (n + 1)) := by grind
 
 end
-
-/-! ### divTwoRec -/
-
-section
-
-variable {motive : Nat → Sort u} (zero : motive 0)
-  (add_one : ∀ n, motive (n + 1).divTwo → motive (n + 1))
-
-@[simp, grind =] theorem divTwoRec_zero : divTwoRec zero add_one 0 = zero := by
-  simp [divTwoRec]
-@[simp, grind =] theorem divTwoRec_one : divTwoRec (motive := motive) zero add_one 1 =
-    add_one 0 zero := by simp [divTwoRec]
-@[simp, grind =] theorem divTwoRec_add_two {n} : divTwoRec zero add_one (n + 2) =
-    add_one (n + 1) (divTwoRec (motive := motive) zero add_one (n.divTwo + 1)) := by
-  simp [divTwoRec]
-
-end
-
-/-! ### bitElimFromOne -/
-
-section
-
-variable {α} {zero : α} {one : α} {bit : Bool → α → α}
-
-@[grind =] theorem bitElimFromOne.go_eq {k : α → α} {n} :
-    bitElimFromOne.go zero one bit k n = k (bitElimFromOne zero one bit n) := by
-  induction n using divTwoRecFromOne generalizing k <;> grind [bitElimFromOne, bitElimFromOne.go]
-
-@[simp, grind =] theorem bitElimFromOne_zero : bitElimFromOne zero one bit 0 = zero := by
-  grind [bitElimFromOne, bitElimFromOne.go]
-@[simp, grind =] theorem bitElimFromOne_one : bitElimFromOne zero one bit 1 = one := by
-  grind [bitElimFromOne, bitElimFromOne.go]
-@[simp, grind =] theorem bitElimFromOne_add_two {n} : bitElimFromOne zero one bit (n + 2) =
-    bit n.isOdd (bitElimFromOne zero one bit (n.divTwo + 1)) := by
-  grind [bitElimFromOne, bitElimFromOne.go]
-
-theorem bitElimFromOne_bit {b n} :
-    bitElimFromOne zero one bit (n.bit b) = if n = 0 then bif b then one else zero else
-    bit b (bitElimFromOne zero one bit n) := by grind [cases Nat]
-
-theorem bitElimFromOne_add_one {n} :
-    bitElimFromOne zero one bit (n + 1) = if n = 0 then one else
-    bit n.isEven (bitElimFromOne zero one bit (n.divTwo + n.isOdd.toNat)) := by
-  cases n with | zero => grind | succ n => cases n.isEven_or_isOdd <;> grind
-
-end
-
-theorem bitElimFromOne_zero_one_bit_apply (n : Nat) : bitElimFromOne 0 1 bit n = n := by
-  induction n using divTwoRecFromOne <;> grind
-
-theorem bitElimFromOne_zero_one_bit : bitElimFromOne 0 1 bit = id :=
-  funext bitElimFromOne_zero_one_bit_apply
 
 /-! ### bitElim -/
 
 section
 
-variable {α} {zero one : α} {bit : Bool → α → α}
+variable {α} {zero : α} {one : α} {bit : Bool → α → α}
 
-@[simp, grind =] theorem bitElim_zero : bitElim zero bit 0 = zero := by simp [bitElim]
-@[simp, grind =] theorem bitElim_one : bitElim zero bit 1 = bit true zero := by simp [bitElim]
-@[simp, grind =] theorem bitElim_add_two {n} : bitElim zero bit (n + 2) =
-    bit n.isOdd (bitElim zero bit (n.divTwo + 1)) := by simp [bitElim]
+@[grind =] theorem bitElim.go_eq {k : α → α} {n} :
+    bitElim.go zero one bit k n = k (bitElim zero one bit n) := by
+  induction n using divTwoRec generalizing k <;> grind [bitElim, bitElim.go]
+
+@[simp, grind =] theorem bitElim_zero : bitElim zero one bit 0 = zero := by
+  grind [bitElim, bitElim.go]
+@[simp, grind =] theorem bitElim_one : bitElim zero one bit 1 = one := by
+  grind [bitElim, bitElim.go]
+@[simp, grind =] theorem bitElim_add_two {n} : bitElim zero one bit (n + 2) =
+    bit n.isOdd (bitElim zero one bit (n.divTwo + 1)) := by
+  grind [bitElim, bitElim.go]
 
 theorem bitElim_bit {b n} :
-    bitElim zero bit (n.bit b) = if n = 0 then bif b then bit b zero else zero else
-    bit b (bitElim zero bit n) := by grind [cases Nat]
+    bitElim zero one bit (n.bit b) = if n = 0 then bif b then one else zero else
+    bit b (bitElim zero one bit n) := by grind [cases Nat]
 
 theorem bitElim_add_one {n} :
-    bitElim zero bit (n + 1) = bit n.isEven (bitElim zero bit (n.divTwo + n.isOdd.toNat)) := by
+    bitElim zero one bit (n + 1) = if n = 0 then one else
+    bit n.isEven (bitElim zero one bit (n.divTwo + n.isOdd.toNat)) := by
   cases n with | zero => grind | succ n => cases n.isEven_or_isOdd <;> grind
-
-theorem bitElim_eq_bitElimFromOne (h : bit true zero = one) :
-    bitElim zero bit = bitElimFromOne zero one bit := h ▸ rfl
 
 end
 
-theorem bitElim_zero_bit_apply {n} : bitElim 0 bit n = n := by
-  induction n using divTwoRecFromOne <;> grind
+theorem bitElim_zero_one_bit_apply (n : Nat) : bitElim 0 1 bit n = n := by
+  induction n using divTwoRec <;> grind
 
-theorem bitElim_zero_one_bit : bitElim 0 bit = id := funext bitElimFromOne_zero_one_bit_apply
+theorem bitElim_zero_one_bit : bitElim 0 1 bit = id :=
+  funext bitElim_zero_one_bit_apply
+
+/-! ### bitElimFromZero -/
+
+section
+
+variable {α} {zero one : α} {bit : Bool → α → α}
+
+theorem bitElimFromZero_zero : bitElimFromZero zero bit 0 = zero := by simp
+theorem bitElimFromZero_one : bitElimFromZero zero bit 1 = bit true zero := by simp
+theorem bitElimFromZero_add_two {n} : bitElimFromZero zero bit (n + 2) =
+    bit n.isOdd (bitElimFromZero zero bit (n.divTwo + 1)) := by simp
+
+theorem bitElimFromZero_bit {b n} :
+    bitElimFromZero zero bit (n.bit b) = if n = 0 then bif b then bit true zero else zero else
+    bit b (bitElimFromZero zero bit n) := by simp [bitElim_bit]
+
+theorem bitElimFromZero_add_one {n} :
+    bitElimFromZero zero bit (n + 1) =
+    bit n.isEven (bitElimFromZero zero bit (n.divTwo + n.isOdd.toNat)) := by
+  cases n with | zero => grind | succ n => cases n.isEven_or_isOdd <;> grind
+
+theorem bitElimFromZero_eq_bitElim (h : bit true zero = one) :
+    bitElimFromZero zero bit = bitElim zero one bit := by grind
+
+end
+
+theorem bitElimFromZero_zero_bit_apply {n} : bitElimFromZero 0 bit n = n := by
+  induction n using divTwoRec <;> grind
+
+theorem bitElimFromZero_zero_one_bit : bitElimFromZero 0 bit = id := funext bitElim_zero_one_bit_apply
 
 /-! ### size -/
 
-@[simp, grind =] theorem size_zero : size 0 = 0 := by simp [size]
-@[simp, grind =] theorem size_one : size 1 = 1 := by simp [size]
-@[simp, grind =] theorem size_add_two {n} : size (n + 2) = size (n.divTwo + 1) + 1 := by
-  simp [size]
+@[simp, grind =] theorem size_zero : size 0 = 0 := bitElim_zero
+@[simp, grind =] theorem size_one : size 1 = 1 := bitElim_one
+@[simp, grind =] theorem size_add_two {n} : size (n + 2) = size (n.divTwo + 1) + 1 :=
+  bitElim_add_two
 
 @[grind =]
 theorem size_add_one {n} : size (n + 1) =
-    if n = 0 then 1 else size (n.divTwo + n.isOdd.toNat) + 1 := bitElimFromOne_add_one
+    if n = 0 then 1 else size (n.divTwo + n.isOdd.toNat) + 1 := bitElim_add_one
 
 theorem size_eq_zero_iff {n} : size n = 0 ↔ n = 0 := by grind [cases Nat]
 theorem size_ne_zero_iff {n} : size n ≠ 0 ↔ n ≠ 0 := by grind [cases Nat]
@@ -455,7 +455,8 @@ instance {n} [NeZero n] : NeZero (size n) := ⟨size_ne_zero_of_ne_zero <| NeZer
 theorem size_succ_ne_zero {n} : size (n + 1) ≠ 0 := NeZero.ne _
 
 @[grind =]
-theorem size_bit {b n} : size (n.bit b) = if n = 0 then b.toNat else size n + 1 := bitElimFromOne_bit
+theorem size_bit {b n} : size (n.bit b) = if n = 0 then b.toNat else size n + 1 :=
+  bitElim_bit
 
 theorem size_bit_zero {b} : size (bit b 0) = b.toNat := by grind
 
@@ -469,22 +470,22 @@ theorem size_bit_add_two {b n} : size (n.bit b + 2) = size (n + 1) + 1 := by sim
 
 /-! ### popcount -/
 
-@[simp, grind =] theorem popcount_zero : popcount 0 = 0 := by simp [popcount]
-@[simp, grind =] theorem popcount_one : popcount 1 = 1 := by simp [popcount, flip]
+@[simp, grind =] theorem popcount_zero : popcount 0 = 0 := bitElim_zero
+@[simp, grind =] theorem popcount_one : popcount 1 = 1 := bitElim_one
 @[simp, grind =] theorem popcount_add_two {n} : popcount (n + 2) =
-    popcount (n.divTwo + 1) + n.isOdd.toNat := by simp [popcount, flip]
+    popcount (n.divTwo + 1) + n.isOdd.toNat := bitElim_add_two
 
 @[grind =]
 theorem popcount_add_one {n} : popcount (n + 1) = if n = 0 then 1 else
-    popcount (n.divTwo + n.isOdd.toNat) + n.isEven.toNat := bitElimFromOne_add_one
+    popcount (n.divTwo + n.isOdd.toNat) + n.isEven.toNat := bitElim_add_one
 
 @[simp, grind =]
 theorem popcount_bit {b n} : popcount (n.bit b) = popcount n + b.toNat :=
-  calc  _ = if n = 0 then b.toNat else popcount n + b.toNat := bitElimFromOne_bit
+  calc  _ = if n = 0 then b.toNat else popcount n + b.toNat := bitElim_bit
         _ = _ := by grind
 
 theorem popcount_eq_zero_iff {n} : popcount n = 0 ↔ n = 0 := by
-  induction n using divTwoRecFromOne <;> grind
+  induction n using divTwoRec <;> grind
 
 theorem popcount_ne_zero_iff {n} : popcount n ≠ 0 ↔ n ≠ 0 := by
   grind [popcount_eq_zero_iff]
@@ -498,7 +499,7 @@ instance {n} [NeZero n] : NeZero (popcount n) := ⟨popcount_ne_zero_of_ne_zero 
 theorem popcount_succ_ne_zero {n} : popcount (n + 1) ≠ 0 := NeZero.ne _
 
 @[grind .] theorem popcount_le_size {n} : popcount n ≤ size n := by
-  induction n using divTwoRecFromOne <;> grind
+  induction n using divTwoRec <;> grind
 
 /-! ### bitsList -/
 
@@ -509,7 +510,7 @@ theorem popcount_succ_ne_zero {n} : popcount (n + 1) ≠ 0 := NeZero.ne _
 
 @[grind =]
 theorem bitsList_add_one {n} : bitsList (n + 1) = if n = 0 then [true] else
-  n.isEven :: bitsList (n.divTwo + n.isOdd.toNat) := bitElimFromOne_add_one
+  n.isEven :: bitsList (n.divTwo + n.isOdd.toNat) := bitElim_add_one
 
 theorem head_bitsList {n : Nat} (hn : n.bitsList ≠ []) : n.bitsList.head hn = n.isOdd := by
   cases n <;> grind
@@ -519,7 +520,7 @@ theorem head?_bitsList {n : Nat} : n.bitsList.head? = (Option.guard (· != 0) n)
 
 @[grind =]
 theorem bitsList_bit {b n} : bitsList (n.bit b) =
-    if n = 0 then bif b then [true] else [] else b :: n.bitsList := bitElimFromOne_bit
+    if n = 0 then bif b then [true] else [] else b :: n.bitsList := bitElim_bit
 
 @[grind =]
 theorem bitsList_divTwo {n : Nat} : n.divTwo.bitsList = n.bitsList.tail := by
@@ -553,18 +554,18 @@ theorem bitsList_eq_nil_of_neZero {n} [NeZero n] : bitsList n ≠ [] :=
   bitsList_eq_nil_of_ne_zero <| NeZero.ne _
 
 @[simp, grind =]
-theorem getElem_bitsList {i n} (hi : i < (bitsList n).length) : (bitsList n)[i] = n.testBit i := by
-  induction n using divTwoRecFromOne generalizing i <;> grind [cases Nat, isOdd_val.symm]
+theorem getElem_bitsList {n i} (hi : i < (bitsList n).length) : (bitsList n)[i] = n.testBit i := by
+  induction n using divTwoRec generalizing i <;> grind [cases Nat, isOdd_val.symm]
 
 @[simp, grind =] theorem length_bitsList {n} : (bitsList n).length = size n := by
-  induction n using divTwoRecFromOne <;> grind
+  induction n using divTwoRec <;> grind
 
 theorem bitsList_eq_ofFn_testBit {n} : bitsList n = List.ofFn (n := n.size) (n.testBit ·) := by
   apply List.ext_getElem <;> simp
 
 @[simp, grind =]
 theorem getLast_bitsList {n} (hn : bitsList n ≠ []) : n.bitsList.getLast hn = true := by
-  induction n using divTwoRecFromOne <;> grind
+  induction n using divTwoRec <;> grind
 
 theorem getLast_bitsList_of_ne_zero {n} (hn : n ≠ 0) :
     n.bitsList.getLast (bitsList_eq_nil_of_ne_zero hn) = true := getLast_bitsList _
@@ -576,7 +577,7 @@ theorem getLast_bitsList_add_one {n} : (n + 1).bitsList.getLast bitsList_succ_ne
   getLast_bitsList _
 
 theorem count_true_bitsList {n : Nat} : n.bitsList.count true = n.popcount := by
-  induction n using divTwoRecFromOne <;> grind
+  induction n using divTwoRec <;> grind
 
 theorem count_false_bitsList {n : Nat} : n.bitsList.count false = n.size - n.popcount := by
   apply Nat.eq_sub_of_add_eq
@@ -627,7 +628,7 @@ theorem ofBitsList_lt_two_pow {bs} : ofBitsList bs < 2 ^ bs.length := by
 
 @[grind =]
 theorem ofBitsList_bitsList (n : Nat) : ofBitsList (bitsList n) = n := by
-  induction n using divTwoRecFromOne <;> grind
+  induction n using divTwoRec <;> grind
 
 theorem leftInverse_ofBitsList_bitsList : ofBitsList.LeftInverse bitsList :=
   ofBitsList_bitsList
@@ -635,9 +636,9 @@ theorem leftInverse_ofBitsList_bitsList : ofBitsList.LeftInverse bitsList :=
 theorem injective_bitsList : bitsList.Injective :=
   leftInverse_ofBitsList_bitsList.injective
 
-theorem eq_of_bitsList_eq {n m} (hnm : bitsList n = bitsList m) : n = m := injective_bitsList hnm
+theorem eq_of_bitsList_eq {m n} (hmn : bitsList m = bitsList n) : m = n := injective_bitsList hmn
 
-theorem bitsList_inj {n m} : bitsList n = bitsList m ↔ n = m := by grind [eq_of_bitsList_eq]
+theorem bitsList_inj {m n} : bitsList m = bitsList n ↔ m = n := by grind [eq_of_bitsList_eq]
 
 @[grind =] theorem bitsList_ofBitsList_of_forall_getLast_eq_true {bs : List Bool}
     (hbs : (hbs : bs ≠ []) → bs.getLast hbs = true) : bitsList (ofBitsList bs) = bs := by
@@ -661,7 +662,7 @@ theorem bitsList_ofBitsList_of_getLast_eq_true {bs : List Bool} (hbs₁ : bs ≠
 @[grind =]
 theorem leastBitsList_eq {n} :
     leastBitsList n = if n = 0 then none else some (bitsList n).dropLast := by
-  induction n using divTwoRecFromOne <;> grind [List.dropLast_cons_of_ne_nil]
+  induction n using divTwoRec <;> grind [List.dropLast_cons_of_ne_nil]
 
 theorem leastBitsList_eq_of_ne_zero {n} (hn : n ≠ 0) :
     leastBitsList n = some (bitsList n).dropLast := by grind
@@ -749,16 +750,21 @@ section
 
 variable {f : Bool → Bool}
 
-@[simp, grind =] theorem bitUnary_zero : bitUnary f 0 = 0 := by simp [bitUnary]
-@[simp, grind =] theorem bitUnary_one : bitUnary f 1 = (f true).toNat := by simp [bitUnary]
+@[simp, grind =] theorem bitUnary_zero : bitUnary f 0 = 0 := bitElim_zero
+@[simp, grind =] theorem bitUnary_one : bitUnary f 1 = (f true).toNat := bitElim_one
 @[simp, grind =] theorem bitUnary_add_two {n} :
-    bitUnary f (n + 2) = bit (f n.isOdd) (bitUnary f (n.divTwo + 1)) := by simp [bitUnary]
+    bitUnary f (n + 2) = bit (f n.isOdd) (bitUnary f (n.divTwo + 1)) := bitElim_add_two
 
 theorem bitUnary_add_one {n} :
     bitUnary f (n + 1) = bit (f n.isEven) (bitUnary f (n.divTwo + n.isOdd.toNat)) := by
-  simp [bitUnary, bitElim_add_one]
+  simp [bitUnary, bitElimFromZero_add_one]
 
 end
+
+@[simp, grind =]
+theorem testBit_bitUnary {n i} : (bitUnary f n).testBit i =
+    (decide (i < n.size) && f (n.testBit i)) := by
+  induction n using divTwoRec generalizing i <;> cases i <;> grind
 
 /- ## bitBinary -/
 
@@ -767,12 +773,13 @@ section
 variable {f : Bool → Bool → Bool}
 
 @[simp, grind =] theorem bitBinary_zero_left {n} :
-    bitBinary f 0 n = bitUnary (f false) n := by simp [bitBinary]
+    bitBinary f 0 n = bitUnary (f false) n := congrFun bitElim_zero n
 @[simp, grind =] theorem bitBinary_one_left {n} :
-    bitBinary f 1 n = bit (f true n.isOdd) (bitUnary (f false) n.divTwo) := by simp [bitBinary]
-@[simp, grind =] theorem bitBinary_add_two_left {n m} :
-    bitBinary f (n + 2) m
-      = bit (f n.isOdd m.isOdd) (bitBinary f (n.divTwo + 1) m.divTwo) := by simp [bitBinary]
+    bitBinary f 1 n = bit (f true n.isOdd) (bitUnary (f false) n.divTwo) :=
+  congrFun bitElim_one n
+@[simp, grind =] theorem bitBinary_add_two_left {m n} :
+    bitBinary f (m + 2) n = bit (f m.isOdd n.isOdd) (bitBinary f (m.divTwo + 1) n.divTwo) :=
+  congrFun bitElim_add_two n
 
 theorem bitBinary_zero_zero : bitBinary f 0 0 = 0 := by simp
 theorem bitBinary_zero_one : bitBinary f 0 1 = (f false true).toNat := by simp
@@ -784,27 +791,33 @@ theorem bitBinary_one_one : bitBinary f 1 1 = (f true true).toNat := by simp
 theorem bitBinary_one_add_two {n} :
     bitBinary f 1 (n + 2) = bit (f true n.isOdd) (bitUnary (f false) (n.divTwo + 1)) := by simp
 
-theorem bitBinary_add_two_add_two {n m} :
-    bitBinary f (n + 2) (m + 2)
-      = bit (f n.isOdd m.isOdd) (bitBinary f (n.divTwo + 1) (m.divTwo + 1)) := by simp
+theorem bitBinary_add_two_add_two {m n} :
+    bitBinary f (m + 2) (n + 2)
+      = bit (f m.isOdd n.isOdd) (bitBinary f (m.divTwo + 1) (n.divTwo + 1)) := by simp
 
-@[simp, grind =] theorem bitBinary_add_two_right {n m} :
-    bitBinary f n (m + 2)
-      = bit (f n.isOdd m.isOdd) (bitBinary f n.divTwo (m.divTwo + 1)) := by
-  cases n using divTwoRecFromOne <;> simp
+@[simp, grind =] theorem bitBinary_add_two_right {m n} :
+    bitBinary f m (n + 2)
+      = bit (f m.isOdd n.isOdd) (bitBinary f m.divTwo (n.divTwo + 1)) := by
+  cases m using divTwoRec <;> simp
+
 @[simp, grind =] theorem bitBinary_zero_right {n} :
-    bitBinary f n 0 = bitUnary (f · false) n := by induction n using divTwoRecFromOne <;> grind
+    bitBinary f n 0 = bitUnary (f · false) n := by induction n using divTwoRec <;> grind
 @[simp, grind =] theorem bitBinary_one_right {n} :
     bitBinary f n 1 = bit (f n.isOdd true) (bitUnary (f · false) n.divTwo) := by
-  cases n using divTwoRecFromOne <;> simp
+  cases n using divTwoRec <;> simp
 
 theorem bitBinary_add_two_zero {n} :
     bitBinary f (n + 2) 0 = bit (f n.isOdd false) (bitUnary (f · false) (n.divTwo + 1)) := by simp
 theorem bitBinary_add_two_one {n} :
     bitBinary f (n + 2) 1 = bit (f n.isOdd true) (bitUnary (f · false) (n.divTwo + 1)) := by simp
 
-theorem bitBinary_flip (f : Bool → Bool → Bool) (n m : Nat) :
-    bitBinary (flip f) n m = bitBinary f m n := by
-  unfold flip; induction n using divTwoRecFromOne generalizing m <;> grind
+theorem bitBinary_flip (f : Bool → Bool → Bool) {m n : Nat} :
+    bitBinary (flip f) m n = bitBinary f n m := by
+  unfold flip; induction n using divTwoRec generalizing m <;> grind
+
+@[simp, grind =]
+theorem testBit_bitBinary {n m i} : (bitBinary f m n).testBit i =
+    ((decide (i < m.size) || decide (i < n.size)) && f (m.testBit i) (n.testBit i)) := by
+  induction n using divTwoRec generalizing i m <;> cases m using divTwoRec <;> cases i <;> grind
 
 end
