@@ -128,3 +128,4 @@ def ofLeastBitsList (oxs : Option (List Bool)) : Nat :=
 /-- Apply a binary boolean operator bitwise on a pair of natural numbers. -/
 @[specialize] def bitBinary (f : Bool → Bool → Bool) (n : Nat) : Nat → Nat :=
   n.bitElimFromZero (bitUnary <| f false) (((bit.uncurry ∘ · ∘ isOddDivTwo) ∘ ·) ∘ Prod.map ∘ f)
+

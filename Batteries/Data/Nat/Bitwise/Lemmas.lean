@@ -430,7 +430,8 @@ end
 theorem bitElimFromZero_zero_bit_apply {n} : bitElimFromZero 0 bit n = n := by
   induction n using divTwoRec <;> grind
 
-theorem bitElimFromZero_zero_one_bit : bitElimFromZero 0 bit = id := funext bitElim_zero_one_bit_apply
+theorem bitElimFromZero_zero_one_bit : bitElimFromZero 0 bit = id :=
+  funext bitElim_zero_one_bit_apply
 
 /-! ### size -/
 
