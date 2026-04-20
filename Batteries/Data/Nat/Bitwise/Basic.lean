@@ -88,6 +88,7 @@ def isOddDivTwo : Nat → Bool × Nat := fun n => (n.isOdd, n.divTwo)
     Base cases are provided for `0`, `1`. All other numbers are folded via their binary digits. -/
 @[inline]
 def bitElim {α : Sort u} (zero one : α) (bit : Bool → α → α) (n : Nat) : α := go id n where
+  /-- Auxiliary tail-recursive implementation for `bitElim`. -/
   @[specialize] go (k : α → α) : Nat → α
   | 0 => k zero | 1 => k one | n + 2 => go (k ∘ bit n.isOdd) (n.divTwo + 1)
   decreasing_by fun_induction divTwo <;> grind
