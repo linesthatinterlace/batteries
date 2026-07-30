@@ -30,22 +30,9 @@ variable {a b i : α}
 
 section BEq
 
+@[grind =]
 theorem swap_apply [BEq α] :
     swap a b i = bif a == i then b else bif b == i then a else i := rfl
-
-@[simp, grind =] theorem swap_apply_of_beq [BEq α] (h₁ : a == i) : swap a b i = b := by
-  grind [swap_apply]
-@[simp, grind =] theorem swap_apply_of_beq_false_of_beq [BEq α] (h₁ : (a == i) = false) (h₂ : b == i) :
-    swap a b i = a := by grind [swap_apply]
-@[simp, grind =] theorem swap_apply_of_beq_false_of_beq_false [BEq α] (h₁ : (a == i) = false)
-    (h₂ : (b == i) = false) : swap a b i = i := by grind [swap_apply]
-
-@[grind .] theorem swap_apply_cases [BEq α] :
-    a == i ∧ swap a b i = b ∨
-    (a == i) = false ∧ b == i ∧ swap a b i = a ∨
-    (a == i) = false ∧ (b == i) = false ∧ swap a b i = i := by grind [swap_apply]
-
-theorem beq_or_beq_of_swap_apply_ne_self [BEq α] (h : swap a b i ≠ i) : a == i ∨ b == i := by grind
 
 end BEq
 
@@ -60,7 +47,8 @@ end ReflBEq
 section EquivBEq
 
 @[grind _=_] theorem swap_apply_beq [BEq α] [EquivBEq α] : (swap a b i == j) =
-    (i == swap a b j) := by grind [BEq.congr_right, BEq.congr_left]
+    (i == swap a b j) := by
+  cases ha : a == i <;> cases hb : b == i <;> grind [BEq.congr_right, BEq.congr_left]
 
 @[simp, grind =] theorem swap_beq_swap_eq [BEq α] [EquivBEq α] :
     (swap a b i == swap a b j) = (i == j) := by grind [BEq.congr_right]
